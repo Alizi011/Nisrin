@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 33 52% 89%;
+    --foreground: 24 33% 17%;
+    --card: 36 67% 94%;
+    --card-foreground: 24 33% 17%;
+    --popover: 36 67% 94%;
+    --popover-foreground: 24 33% 17%;
+    --primary: 17 65% 46%;
+    --primary-foreground: 36 67% 94%;
+    --secondary: 35 46% 85%;
+    --secondary-foreground: 24 33% 17%;
+    --muted: 35 40% 86%;
+    --muted-foreground: 28 20% 42%;
+    --accent: 33 74% 53%;
+    --accent-foreground: 24 33% 17%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 36 67% 94%;
+    --border: 28 25% 78%;
+    --input: 28 25% 78%;
+    --ring: 17 65% 46%;
+    --radius: 0.25rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+  ::selection {
+    background: #e0912f;
+    color: #fbf2e6;
+  }
+}
+
+/* ---------- Signature viewport frame (dusty blue, like zellige borders) ---------- */
+.viewport-frame {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  border: 10px solid #5e87a8;
+}
+@media (max-width: 768px) {
+  .viewport-frame {
+    border-width: 5px;
+  }
+}
+.viewport-frame::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(94, 135, 168, 0.35);
+}
+
+/* ---------- Zellige pattern helpers ---------- */
+.zellige-band {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%235E87A8' stroke-width='1' opacity='0.5'%3E%3Cpath d='M36 6l7 17 17-7-7 17 17 7-17 7 7 17-17-7-7 17-7-17-17 7 7-17-17-7 17-7-7-17 17 7z'/%3E%3Ccircle cx='36' cy='36' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+.zellige-band-rust {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23C14E2A' stroke-width='1' opacity='0.45'%3E%3Cpath d='M36 6l7 17 17-7-7 17 17 7-17 7 7 17-17-7-7 17-7-17-17 7 7-17-17-7 17-7-7-17 17 7z'/%3E%3Ccircle cx='36' cy='36' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+.zellige-band-ivory {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23FBF2E6' stroke-width='1' opacity='0.4'%3E%3Cpath d='M36 6l7 17 17-7-7 17 17 7-17 7 7 17-17-7-7 17-7-17-17 7 7-17-17-7 17-7-7-17 17 7z'/%3E%3Ccircle cx='36' cy='36' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ---------- Scroll reveal ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---------- Marquee ---------- */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 36s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ---------- Underline-style inputs (editorial) ---------- */
+.input-line {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(59, 42, 30, 0.4);
+  border-radius: 0;
+  padding: 0.55rem 0.1rem;
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
+  transition: border-color 0.3s;
+}
+.input-line:focus {
+  border-color: #c14e2a;
+}
+.input-line::placeholder {
+  color: rgba(59, 42, 30, 0.45);
+}
+
+/* ---------- Drawers ---------- */
+.drawer-panel {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.drawer-overlay {
+  transition: opacity 0.4s ease;
+}
+
+/* ---------- Scrollbar ---------- */
+.nice-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.nice-scroll::-webkit-scrollbar-thumb {
+  background: rgba(94, 135, 168, 0.5);
+  border-radius: 3px;
+}
+.nice-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
