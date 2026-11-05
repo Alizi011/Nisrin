@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { useLocation } from 'react-router'
+import AdminPreview from '@/pages/AdminPreview'
 import { ShopProvider, useShop } from '@/store/ShopContext'
 import Header from '@/components/Header'
 import Hero from '@/components/Hero'
@@ -68,6 +70,9 @@ function Page() {
 }
 
 export default function App() {
+  const { pathname } = useLocation()
+  if (pathname === '/admin' || pathname === '/admin/') return <AdminPreview />
+
   return (
     <ShopProvider>
       <Page />
