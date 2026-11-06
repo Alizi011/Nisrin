@@ -1,0 +1,30 @@
+name: Frontend validation (no deployment)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'feat/**'
+      - 'chore/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: ESLint
+        run: npm run lint
