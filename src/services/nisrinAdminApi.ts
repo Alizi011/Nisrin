@@ -8,12 +8,12 @@ export type NisrinUser = {
 }
 
 export class NisrinApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
+  public readonly status: number
+
+  constructor(message: string, status: number) {
     super(message)
     this.name = 'NisrinApiError'
+    this.status = status
   }
 }
 
