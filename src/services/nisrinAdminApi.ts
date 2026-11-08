@@ -97,3 +97,22 @@ export async function logout(): Promise<void> {
     body: '{}',
   })
 }
+
+export type NisrinAdminProduct = {
+  id: number
+  name: string
+  status: string
+  complianceStatus: string
+  category: string | null
+  variants: Array<{
+    sku: string
+    label: string
+    priceOre: number
+    isActive: boolean
+  }>
+}
+
+export async function getAdminProducts(): Promise<NisrinAdminProduct[]> {
+  const result = await request<{ products: NisrinAdminProduct[] }>('/admin/products')
+  return result.products
+}

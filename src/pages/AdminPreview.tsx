@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowLeft, Boxes, ClipboardList, LayoutDashboard, LockKeyhole, LogOut, Package, ShoppingBag, Users } from 'lucide-react'
 import { getSession, login, logout, type NisrinUser } from '@/services/nisrinAdminApi'
+import AdminProductsPanel from '@/pages/AdminProductsPanel'
 
 const sections = [
   { name: 'Oversikt', description: 'Nøkkeltall og aktiviteter' },
@@ -98,9 +99,8 @@ export default function AdminPreview() {
 
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div role="status" className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
-          <strong>Utviklingsversjon.</strong> Administrasjons-API-et er foreløpig sperret for eksterne tilkoblinger.
-          Innlogging vil ikke fungere før servertilgangen er sikkerhetsgodkjent. Oversikten under er kun design;
-          produkt- og lagerdata hentes ennå ikke fra databasen.
+          <strong>Utviklingsversjon.</strong> Administratorinnloggingen er ennå ikke åpnet for offentlig tilgang.
+          Produktoversikten er under utvikling og vil kun hente data ved godkjent innlogging. Øvrige moduler er designskisser.
         </div>
 
         {error && (
@@ -186,12 +186,18 @@ export default function AdminPreview() {
                     <LayoutDashboard size={20} aria-hidden="true" />
                     <h3 className="font-serif text-2xl">{selected}</h3>
                   </div>
-                  <p className="mb-3 flex items-center gap-2 text-sm text-gray-600">
-                    <Users size={17} aria-hidden="true" /> Ingen API-kall for denne modulen ennå.
-                  </p>
-                  <p className="flex items-center gap-2 rounded-lg bg-[#f6f3ed] p-4 text-sm">
-                    <ClipboardList size={17} aria-hidden="true" /> {sections.find(item => item.name === selected)?.description}
-                  </p>
+                  {authenticated && selected === 'Produkter' ? (
+                    <AdminProductsPanel />
+                  ) : (
+                    <>
+                      <p className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+                        <Users size={17} aria-hidden="true" /> Ingen API-kall for denne modulen ennå.
+                      </p>
+                      <p className="flex items-center gap-2 rounded-lg bg-[#f6f3ed] p-4 text-sm">
+                        <ClipboardList size={17} aria-hidden="true" /> {sections.find(item => item.name === selected)?.description}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
