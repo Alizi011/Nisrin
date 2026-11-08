@@ -197,7 +197,7 @@ export default function AdminPreview() {
                         <ClipboardList size={17} aria-hidden="true" /> {sections.find(item => item.name === selected)?.description}
                       </p>
                     </>
-                  )
+                  )}
                 </div>
               </div>
             </div>
