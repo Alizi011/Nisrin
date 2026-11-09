@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PRODUCTS, formatPrice } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
 import { Stars } from '@/components/ProductCard'
 
 export default function SearchOverlay() {
-  const { searchOpen, setSearchOpen, openProduct } = useShop()
-  const [query, setQuery] = useState('')
+  const { searchOpen } = useShop()
+  // Mount the search state only while the overlay is open, so reopening starts empty.
+  return searchOpen ? <SearchOverlayContent /> : null
+}
 
-  useEffect(() => {
-    if (searchOpen) setQuery('')
-  }, [searchOpen])
+function SearchOverlayContent() {
+  const { setSearchOpen, openProduct } = useShop()
+  const [query, setQuery] = useState('')
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -24,7 +26,6 @@ export default function SearchOverlay() {
     )
   }, [query])
 
-  if (!searchOpen) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-ivory">
