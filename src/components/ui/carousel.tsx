@@ -56,14 +56,25 @@ function Carousel({
     },
     plugins
   )
-  const [canScrollPrev, setCanScrollPrev] = React.useState(false)
-  const [canScrollNext, setCanScrollNext] = React.useState(false)
+  // Subscribe to Embla's external state instead of synchronously setting
+  // React state in an effect. A stable number is safe as a snapshot.
+  const subscribe = React.useCallback((onChange: () => void) => {
+    if (!api) return () => {}
+    api.on("select", onChange)
+    api.on("reInit", onChange)
+    return () => {
+      api.off("select", onChange)
+      api.off("reInit", onChange)
+    }
+  }, [api])
 
-  const onSelect = React.useCallback((api: CarouselApi) => {
-    if (!api) return
-    setCanScrollPrev(api.canScrollPrev())
-    setCanScrollNext(api.canScrollNext())
-  }, [])
+  const getSnapshot = React.useCallback(
+    () => api ? (Number(api.canScrollPrev()) | (Number(api.canScrollNext()) << 1)) : 0,
+    [api]
+  )
+  const scrollState = React.useSyncExternalStore(subscribe, getSnapshot, () => 0)
+  const canScrollPrev = Boolean(scrollState & 1)
+  const canScrollNext = Boolean(scrollState & 2)
 
   const scrollPrev = React.useCallback(() => {
     api?.scrollPrev()
@@ -90,17 +101,6 @@ function Carousel({
     if (!api || !setApi) return
     setApi(api)
   }, [api, setApi])
-
-  React.useEffect(() => {
-    if (!api) return
-    onSelect(api)
-    api.on("reInit", onSelect)
-    api.on("select", onSelect)
-
-    return () => {
-      api?.off("select", onSelect)
-    }
-  }, [api, onSelect])
 
   return (
     <CarouselContext.Provider
