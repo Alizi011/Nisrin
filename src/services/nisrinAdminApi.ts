@@ -116,3 +116,50 @@ export async function getAdminProducts(): Promise<NisrinAdminProduct[]> {
   const result = await request<{ products: NisrinAdminProduct[] }>('/admin/products')
   return result.products
 }
+
+export type NisrinStaffRole = 'admin' | 'manager' | 'seller'
+
+export type NisrinStaffUser = {
+  id: number
+  name: string
+  email: string
+  status: 'active' | 'disabled'
+  role: NisrinStaffRole
+}
+
+export async function getStaff(): Promise<NisrinStaffUser[]> {
+  const result = await request<{ users: NisrinStaffUser[] }>('/admin/users')
+  return result.users
+}
+
+async function staffMutation<T>(path: string, method: 'POST' | 'PATCH', payload: unknown): Promise<T> {
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  return request<T>(path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function createStaff(input: {
+  name: string
+  email: string
+  role: NisrinStaffRole
+  password: string
+}): Promise<NisrinStaffUser> {
+  const result = await staffMutation<{ user: NisrinStaffUser }>('/admin/users', 'POST', input)
+  return result.user
+}
+
+export async function updateStaff(
+  id: number,
+  input: { role: NisrinStaffRole; status: 'active' | 'disabled' },
+): Promise<NisrinStaffUser> {
+  const result = await staffMutation<{ user: NisrinStaffUser }>(
+    `/admin/users/${id}`, 'PATCH', input,
+  )
+  return result.user
+}
