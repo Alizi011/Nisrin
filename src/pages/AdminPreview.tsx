@@ -14,8 +14,22 @@ const sections = [
   { name: 'Økonomi', description: 'Salg og regnskapsgrunnlag' },
 ] as const
 
-function isAdministrator(user: NisrinUser | null): user is NisrinUser {
-  return user !== null && user.roles.includes('admin')
+function isStaff(user: NisrinUser | null): user is NisrinUser {
+  return user !== null && user.roles.some((role) => ['admin', 'manager', 'seller'].includes(role))
+}
+
+function canReadProducts(user: NisrinUser): boolean {
+  return user.roles.includes('admin') || user.roles.includes('manager')
+}
+
+function visibleSections(user: NisrinUser | null) {
+  // Design preview has no live backend access.
+  if (!user) return sections
+  if (user.roles.includes('admin')) return sections
+  if (user.roles.includes('manager')) {
+    return sections.filter(({ name }) => !['Ansatte', 'Økonomi'].includes(name))
+  }
+  return sections.filter(({ name }) => ['Oversikt', 'Bestillinger'].includes(name))
 }
 
 export default function AdminPreview() {
@@ -33,8 +47,8 @@ export default function AdminPreview() {
     getSession()
       .then((result) => {
         if (!active) return
-        if (result !== null && !isAdministrator(result)) {
-          setError('Kontoen har ikke administratorrettigheter.')
+        if (result !== null && !isStaff(result)) {
+          setError('Kontoen har ikke tilgang til butikkportalen.')
           return
         }
         setUser(result)
@@ -56,8 +70,8 @@ export default function AdminPreview() {
     try {
       const result = await login(email.trim(), password)
       setPassword('')
-      if (!isAdministrator(result)) {
-        setError('Kontoen har ikke administratorrettigheter.')
+      if (!isStaff(result)) {
+        setError('Kontoen har ikke tilgang til butikkportalen.')
         return
       }
       setPreview(false)
@@ -85,7 +99,9 @@ export default function AdminPreview() {
     }
   }
 
-  const authenticated = isAdministrator(user)
+  const authenticated = isStaff(user)
+  const isAdmin = authenticated && user.roles.includes('admin')
+  const accessibleSections = visibleSections(authenticated ? user : null)
   const showDashboard = authenticated || preview
 
   return (
@@ -101,7 +117,7 @@ export default function AdminPreview() {
 
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div role="status" className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
-          <strong>Utviklingsversjon.</strong> Administratorinnloggingen er ennå ikke åpnet for offentlig tilgang.
+          <strong>Utviklingsversjon.</strong> Innlogging for butikkpersonalet er ennå ikke åpnet for offentlig tilgang.
           Produktoversikten er under utvikling og vil kun hente data ved godkjent innlogging. Øvrige moduler er designskisser.
         </div>
 
@@ -146,7 +162,9 @@ export default function AdminPreview() {
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-serif text-3xl">{authenticated ? 'Kontrollpanel' : 'Kontrollpanel – designskisse'}</h2>
-                {authenticated && <p className="mt-1 text-sm text-[#6d6255]">Innlogget som {user.name}</p>}
+                {authenticated && <p className="mt-1 text-sm text-[#6d6255]">
+                  Innlogget som {user.name} · {isAdmin ? 'Administrator' : user.roles.includes('manager') ? 'Butikksjef' : 'Butikkansatt'}
+                </p>}
               </div>
               {authenticated ? (
                 <button type="button" disabled={pending} onClick={handleLogout}
@@ -160,7 +178,7 @@ export default function AdminPreview() {
             </div>
             <div className="grid gap-5 md:grid-cols-[220px_1fr]">
               <nav aria-label="Administrasjonsmoduler" className="rounded-xl border bg-white p-3">
-                {sections.map(({ name }) => (
+                {accessibleSections.map(({ name }) => (
                   <button type="button" key={name} onClick={() => setSelected(name)}
                     aria-current={selected === name ? 'page' : undefined}
                     className={`block w-full rounded-lg p-3 text-left text-sm ${selected === name ? 'bg-[#efe5d8] font-bold' : 'hover:bg-[#f6f3ed]'}`}>
@@ -188,9 +206,9 @@ export default function AdminPreview() {
                     <LayoutDashboard size={20} aria-hidden="true" />
                     <h3 className="font-serif text-2xl">{selected}</h3>
                   </div>
-                  {authenticated && selected === 'Produkter' ? (
+                  {authenticated && canReadProducts(user) && selected === 'Produkter' ? (
                     <AdminProductsPanel />
-                  ) : authenticated && selected === 'Ansatte' ? (
+                  ) : isAdmin && selected === 'Ansatte' ? (
                     <AdminStaffPanel currentUserId={user.id} />
                   ) : (
                     <>
