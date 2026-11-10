@@ -3,6 +3,7 @@ import { ArrowLeft, Boxes, ClipboardList, LayoutDashboard, LockKeyhole, LogOut, 
 import { getSession, login, logout, type NisrinUser } from '@/services/nisrinAdminApi'
 import AdminProductsPanel from '@/pages/AdminProductsPanel'
 import AdminStaffPanel from '@/pages/AdminStaffPanel'
+import AdminOverviewPanel from '@/pages/AdminOverviewPanel'
 
 const sections = [
   { name: 'Oversikt', description: 'Nøkkeltall og aktiviteter' },
@@ -187,26 +188,30 @@ export default function AdminPreview() {
                 ))}
               </nav>
               <div>
-                <div className="mb-5 grid gap-3 sm:grid-cols-3">
-                  {[
-                    { name: 'Omsetning', Icon: ShoppingBag },
-                    { name: 'Produkter', Icon: Package },
-                    { name: 'Lager', Icon: Boxes },
-                  ].map(({ name, Icon }) => (
-                    <div key={name} className="rounded-xl border bg-white p-5">
-                      <Icon size={20} className="mb-3" aria-hidden="true" />
-                      <div className="text-sm">{name}</div>
-                      <div className="mt-2 text-2xl">—</div>
-                      <div className="text-xs text-gray-500">Ingen levende data</div>
-                    </div>
-                  ))}
-                </div>
+                {!authenticated && (
+                  <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                    {[
+                      { name: 'Omsetning', Icon: ShoppingBag },
+                      { name: 'Produkter', Icon: Package },
+                      { name: 'Lager', Icon: Boxes },
+                    ].map(({ name, Icon }) => (
+                      <div key={name} className="rounded-xl border bg-white p-5">
+                        <Icon size={20} className="mb-3" aria-hidden="true" />
+                        <div className="text-sm">{name}</div>
+                        <div className="mt-2 text-2xl">—</div>
+                        <div className="text-xs text-gray-500">Designskisse – ingen levende data</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="rounded-xl border bg-white p-6">
                   <div className="mb-3 flex items-center gap-2">
                     <LayoutDashboard size={20} aria-hidden="true" />
                     <h3 className="font-serif text-2xl">{selected}</h3>
                   </div>
-                  {authenticated && canReadProducts(user) && selected === 'Produkter' ? (
+                  {authenticated && canReadProducts(user) && selected === 'Oversikt' ? (
+                    <AdminOverviewPanel />
+                  ) : authenticated && canReadProducts(user) && selected === 'Produkter' ? (
                     <AdminProductsPanel />
                   ) : isAdmin && selected === 'Ansatte' ? (
                     <AdminStaffPanel currentUserId={user.id} />

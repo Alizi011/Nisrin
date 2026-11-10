@@ -163,3 +163,15 @@ export async function updateStaff(
   )
   return result.user
 }
+
+export type NisrinAdminOverview = {
+  productsTotal: number
+  productsDraft: number
+  productsPendingApproval: number
+  ordersTotal: number
+}
+
+export async function getAdminOverview(): Promise<NisrinAdminOverview> {
+  const result = await request<{ overview: NisrinAdminOverview }>('/admin/overview')
+  return result.overview
+}
