@@ -26,7 +26,7 @@ jobs:
         run: npm ci
       - name: Type-check and build
         run: npm run build
-      - name: Viewport hook unit tests
-        run: node --test tests/use-mobile.test.mjs
+      - name: Frontend unit tests
+        run: node --test tests/*.test.mjs
       - name: ESLint
         run: npm run lint
