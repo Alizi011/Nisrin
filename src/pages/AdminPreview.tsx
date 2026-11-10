@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowLeft, Boxes, ClipboardList, LayoutDashboard, LockKeyhole, LogOut, Package, ShoppingBag, Users } from 'lucide-react'
 import { getSession, login, logout, type NisrinUser } from '@/services/nisrinAdminApi'
 import AdminProductsPanel from '@/pages/AdminProductsPanel'
+import AdminStaffPanel from '@/pages/AdminStaffPanel'
 
 const sections = [
   { name: 'Oversikt', description: 'Nøkkeltall og aktiviteter' },
@@ -9,6 +10,7 @@ const sections = [
   { name: 'Varelager', description: 'Lagerbeholdning og varepartier' },
   { name: 'Bestillinger', description: 'Ordre og leveranser' },
   { name: 'Kunder', description: 'Kundeprofiler og adresser' },
+  { name: 'Ansatte', description: 'Brukere og tilgangsstyring' },
   { name: 'Økonomi', description: 'Salg og regnskapsgrunnlag' },
 ] as const
 
@@ -188,6 +190,8 @@ export default function AdminPreview() {
                   </div>
                   {authenticated && selected === 'Produkter' ? (
                     <AdminProductsPanel />
+                  ) : authenticated && selected === 'Ansatte' ? (
+                    <AdminStaffPanel currentUserId={user.id} />
                   ) : (
                     <>
                       <p className="mb-3 flex items-center gap-2 text-sm text-gray-600">
