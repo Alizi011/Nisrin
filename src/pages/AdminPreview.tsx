@@ -3,6 +3,7 @@ import { ArrowLeft, Boxes, ClipboardList, LayoutDashboard, LockKeyhole, LogOut, 
 import { getSession, login, logout, type NisrinUser } from '@/services/nisrinAdminApi'
 import AdminProductsPanel from '@/pages/AdminProductsPanel'
 import AdminStaffPanel from '@/pages/AdminStaffPanel'
+import AdminOverviewPanel from '@/pages/AdminOverviewPanel'
 
 const sections = [
   { name: 'Oversikt', description: 'Nøkkeltall og aktiviteter' },
@@ -206,7 +207,9 @@ export default function AdminPreview() {
                     <LayoutDashboard size={20} aria-hidden="true" />
                     <h3 className="font-serif text-2xl">{selected}</h3>
                   </div>
-                  {authenticated && canReadProducts(user) && selected === 'Produkter' ? (
+                  {authenticated && canReadProducts(user) && selected === 'Oversikt' ? (
+                    <AdminOverviewPanel />
+                  ) : authenticated && canReadProducts(user) && selected === 'Produkter' ? (
                     <AdminProductsPanel />
                   ) : isAdmin && selected === 'Ansatte' ? (
                     <AdminStaffPanel currentUserId={user.id} />
