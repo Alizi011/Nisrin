@@ -152,6 +152,27 @@ export async function updateDraftProduct(
   }
 }
 
+export type NisrinCreateProductInput = Omit<NisrinProductDraftInput, 'variants'> & {
+  variants: Array<{ sku: string; label: string; priceOre: number }>
+}
+
+/** Create only an unpublished draft; publication and approvals are never client options. */
+export async function createProductDraft(input: NisrinCreateProductInput): Promise<number> {
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{ created: boolean; id: number }>('/admin/products', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(input),
+  })
+  if (result.created !== true || !Number.isSafeInteger(result.id) || result.id < 1) {
+    throw new NisrinApiError('Serveren bekreftet ikke opprettelsen av produktutkastet.', 502)
+  }
+  return result.id
+}
+
 export type NisrinStaffRole = 'admin' | 'manager' | 'seller'
 
 export type NisrinStaffUser = {
