@@ -101,6 +101,10 @@ export async function logout(): Promise<void> {
 export type NisrinAdminProduct = {
   id: number
   name: string
+  subtitle: string
+  description: string
+  ingredients: string
+  usage: string
   status: string
   complianceStatus: string
   category: string | null
@@ -115,6 +119,37 @@ export type NisrinAdminProduct = {
 export async function getAdminProducts(): Promise<NisrinAdminProduct[]> {
   const result = await request<{ products: NisrinAdminProduct[] }>('/admin/products')
   return result.products
+}
+
+export type NisrinProductDraftInput = {
+  name: string
+  subtitle: string
+  description: string
+  ingredients: string
+  usage: string
+  variants: Array<{ sku: string; priceOre: number }>
+}
+
+/** Save an unpublished draft only. Server enforces role, CSRF, status and SKU list. */
+export async function updateDraftProduct(
+  id: number,
+  input: NisrinProductDraftInput,
+): Promise<void> {
+  if (!Number.isSafeInteger(id) || id < 1) {
+    throw new NisrinApiError('Ugyldig produkt-ID.', 400)
+  }
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{ updated: boolean; id: number }>(`/admin/products/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(input),
+  })
+  if (result.updated !== true || result.id !== id) {
+    throw new NisrinApiError('Produktet ble ikke bekreftet lagret av serveren.', 502)
+  }
 }
 
 export type NisrinStaffRole = 'admin' | 'manager' | 'seller'
