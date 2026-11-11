@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import AdminCreateProductDraft from '@/pages/AdminCreateProductDraft'
 import {
   getAdminProducts, updateDraftProduct, type NisrinAdminProduct,
   type NisrinProductDraftInput,
@@ -100,11 +101,17 @@ export default function AdminProductsPanel() {
   }
 
   if (products.length === 0) {
-    return <p className="text-sm text-[#6d6255]">Ingen produkter registrert ennå.</p>
+    return (
+      <div>
+        <AdminCreateProductDraft onCreated={async () => setProducts(await getAdminProducts())} />
+        <p className="text-sm text-[#6d6255]">Ingen produkter registrert ennå.</p>
+      </div>
+    )
   }
 
   return (
     <div className="overflow-x-auto">
+      <AdminCreateProductDraft onCreated={async () => setProducts(await getAdminProducts())} />
       <p className="mb-4 text-sm text-[#6d6255]">{products.length} produkter hentet fra NISRIN-API. Viser også utkast.</p>
       <table className="w-full min-w-[640px] border-collapse text-left text-sm">
         <thead className="border-b border-[#e8dfd4] text-[#6d6255]">
@@ -214,7 +221,7 @@ export default function AdminProductsPanel() {
           </div>
         </form>
       )}
-      <p className="mt-4 text-xs text-[#6d6255]">Bare utkast kan redigeres. Opprettelse, publisering, lager og betaling er ikke aktivert.</p>
+      <p className="mt-4 text-xs text-[#6d6255]">Utkast kan opprettes og redigeres. Publisering, dokumentasjonsgodkjenning, lager og betaling er ikke aktivert.</p>
     </div>
   )
 }
