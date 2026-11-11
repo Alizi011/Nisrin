@@ -48,7 +48,6 @@ export default function AdminProductsPanel() {
     event.preventDefault()
     if (!draft || editingId === null || saving) return
     if (!draft.name.trim() || !draft.description.trim() ||
-        draft.variants.length === 0 ||
         draft.variants.some((v) => !Number.isSafeInteger(v.priceOre) || v.priceOre < 1 || v.priceOre > 100000000)) {
       setSaveError('Navn, beskrivelse og positive heltallspriser i øre er påkrevd.')
       return
@@ -201,7 +200,7 @@ export default function AdminProductsPanel() {
                 </span>
               </label>
             ))}
-            <p className="text-xs text-[#6d6255]">159,00 kr = 15900 øre. SKU og antall varianter kan ikke endres her.</p>
+            <p className="text-xs text-[#6d6255]">159,00 kr = 15900 øre. SKU og antall varianter kan ikke endres her. Utkast uten varianter kan få tekst oppdatert.</p>
           </fieldset>
           <div className="flex flex-wrap gap-3">
             <button type="submit" disabled={saving}
