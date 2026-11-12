@@ -103,7 +103,7 @@ export function parsePublicCatalog(payload: unknown, apiBase: string): Product[]
 
 /** Public GET; never sends admin cookies or silently substitutes sample products. */
 export async function getPublicCatalog(signal?: AbortSignal): Promise<Product[]> {
-  const apiBase = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/\\/+$/, '')
+  const apiBase = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/[/]+$/, '')
   const response = await fetch(`${apiBase}/products`, {
     method: 'GET',
     credentials: 'omit',
