@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { PRODUCTS, formatPrice, FREE_SHIPPING_THRESHOLD } from '@/data/products'
+import { formatPrice, FREE_SHIPPING_THRESHOLD } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
 import { EightStar } from '@/components/patterns'
 
 export default function CartDrawer() {
   const {
     cart,
+    products,
     cartOpen,
     setCartOpen,
     updateQty,
@@ -14,21 +14,9 @@ export default function CartDrawer() {
     discount,
     shipping,
     total,
-    promo,
-    applyPromo,
     setCheckoutOpen,
   } = useShop()
-  const [code, setCode] = useState('')
-  const [codeError, setCodeError] = useState(false)
-
   const progress = Math.min(1, (subtotal - discount) / FREE_SHIPPING_THRESHOLD)
-
-  const tryPromo = () => {
-    if (!code.trim()) return
-    const ok = applyPromo(code)
-    setCodeError(!ok)
-    if (ok) setCode('')
-  }
 
   return (
     <div className={`fixed inset-0 z-[100] ${cartOpen ? '' : 'pointer-events-none'}`}>
@@ -80,7 +68,7 @@ export default function CartDrawer() {
 
             <div className="nice-scroll flex-1 overflow-y-auto px-6">
               {cart.map((it) => {
-                const p = PRODUCTS.find((x) => x.id === it.productId)!
+                const p = products.find((x) => x.id === it.productId)!
                 const v = p.variants.find((vv) => vv.label === it.variantLabel)!
                 return (
                   <div key={`${it.productId}-${it.variantLabel}`} className="flex gap-4 border-b border-ink/10 py-4">
@@ -114,35 +102,6 @@ export default function CartDrawer() {
             </div>
 
             <div className="border-t border-ink/15 px-6 py-5">
-              {/* Rabattkode */}
-              {promo ? (
-                <p className="mb-3 flex items-center gap-2 text-[12px] font-bold tracking-[0.1em] text-rust uppercase">
-                  <EightStar className="h-4 w-4" /> Kode {promo} aktivert — 10 % avslag
-                </p>
-              ) : (
-                <div className="mb-3">
-                  <div className="flex gap-2">
-                    <input
-                      value={code}
-                      onChange={(e) => {
-                        setCode(e.target.value)
-                        setCodeError(false)
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && tryPromo()}
-                      placeholder="Rabattkode (prøv HAMMAM10)"
-                      className="input-line !py-2 text-xs"
-                    />
-                    <button
-                      onClick={tryPromo}
-                      className="shrink-0 border border-espresso px-4 text-[11px] font-bold tracking-[0.16em] uppercase transition-colors hover:bg-espresso hover:text-ivory"
-                    >
-                      Bruk
-                    </button>
-                  </div>
-                  {codeError && <p className="mt-1 text-[11px] text-rust">Ugyldig kode — prøv HAMMAM10</p>}
-                </div>
-              )}
-
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between text-ink/70">
                   <span>Delsum</span>
