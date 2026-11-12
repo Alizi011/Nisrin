@@ -11,11 +11,12 @@ import roseLip from '@/assets/rose-lip.jpg'
 import hammamSet from '@/assets/hammam-set.jpg'
 import akerFassi from '@/assets/aker-fassi.jpg'
 
-export type Category = 'Olje' | 'Serum' | 'Maske' | 'Rens' | 'Krem' | 'Mist' | 'Lepper' | 'Kropp' | 'Sett'
+export type Category = string
 
 export type Badge = 'Bestseller' | 'Nyhet' | 'Kun noen få igjen'
 
 export interface Variant {
+  sku?: string
   label: string
   price: number
 }
@@ -322,5 +323,5 @@ export const FREE_SHIPPING_THRESHOLD = 600
 export const SHIPPING_COST = 59
 
 export function formatPrice(n: number): string {
-  return `${n.toLocaleString('nb-NO')} kr`
+  return `${n.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`
 }

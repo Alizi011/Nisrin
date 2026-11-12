@@ -1,4 +1,4 @@
-import { PRODUCTS, formatPrice } from '@/data/products'
+import { formatPrice } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
 
 /**
@@ -6,7 +6,7 @@ import { useShop } from '@/store/ShopContext'
  * integration is available. Never ask for payment card details in React.
  */
 export default function CheckoutModal() {
-  const { checkoutOpen, setCheckoutOpen, cart, subtotal, discount, shipping, total } = useShop()
+  const { checkoutOpen, setCheckoutOpen, cart, products, subtotal, discount, shipping, total } = useShop()
 
   if (!checkoutOpen) return null
 
@@ -44,7 +44,7 @@ export default function CheckoutModal() {
               <p className="text-sm">Handlekurven er tom.</p>
             ) : (
               cart.map((item) => {
-                const product = PRODUCTS.find((p) => p.id === item.productId)
+                const product = products.find((p) => p.id === item.productId)
                 const variant = product?.variants.find((v) => v.label === item.variantLabel)
                 if (!product || !variant) return null
                 return (

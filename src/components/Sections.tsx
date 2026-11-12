@@ -164,8 +164,7 @@ export function Footer() {
               <li><a href="#butikk" className="transition-colors hover:text-saffron">Alle produkter</a></li>
               <li><a href="#ritualer" className="transition-colors hover:text-saffron">Hammam-ritualet</a></li>
               <li><a href="#ingredienser" className="transition-colors hover:text-saffron">Ingredienser</a></li>
-              <li><a href="#anmeldelser" className="transition-colors hover:text-saffron">Anmeldelser</a></li>
-            </ul>
+                          </ul>
           </div>
           <div>
             <p className="mb-4 text-[11px] font-bold tracking-[0.24em] text-saffron uppercase">Kundeservice</p>
@@ -178,7 +177,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ivory/15 pt-6 text-[11px] tracking-[0.14em] text-ivory/45 uppercase md:flex-row">
-          <span>© 2026 Nisrin · Org.nr 923 456 789</span>
+          <span>© 2026 Nisrin</span>
           <span>Håndlaget i Marokko · Pakket i Oslo</span>
         </div>
       </div>

@@ -1,11 +1,11 @@
-import { PRODUCTS, formatPrice } from '@/data/products'
+import { formatPrice } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
 import { EightStar } from '@/components/patterns'
 
 export default function WishlistDrawer() {
-  const { wishlist, wishlistOpen, setWishlistOpen, toggleWishlist, addToCart, openProduct } = useShop()
+  const { products, wishlist, wishlistOpen, setWishlistOpen, toggleWishlist, addToCart, openProduct } = useShop()
 
-  const items = PRODUCTS.filter((p) => wishlist.includes(p.id))
+  const items = products.filter((p) => wishlist.includes(p.id))
 
   return (
     <div className={`fixed inset-0 z-[100] ${wishlistOpen ? '' : 'pointer-events-none'}`}>

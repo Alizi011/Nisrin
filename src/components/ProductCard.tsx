@@ -28,12 +28,10 @@ export default function ProductCard({ product }: { product: Product }) {
     <article className="group relative">
       <div className="relative overflow-hidden bg-sand">
         <button onClick={() => openProduct(product)} className="block w-full cursor-pointer" aria-label={`Se ${product.name}`}>
-          <img
-            src={product.image}
-            alt={product.name}
-            loading="lazy"
-            className="aspect-[4/5] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-          />
+          {product.image ? (
+            <img src={product.image} alt={product.name} loading="lazy"
+              className="aspect-[4/5] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]" />
+          ) : <div className="flex aspect-[4/5] items-center justify-center bg-sand text-xs text-ink/50">Bilde kommer</div>}
         </button>
 
         {product.badge && (
@@ -79,13 +77,13 @@ export default function ProductCard({ product }: { product: Product }) {
           {product.name}
         </h3>
         <div className="mt-1.5 flex items-center justify-between">
-          <Stars value={product.rating} />
+          {product.reviewCount > 0 && <Stars value={product.rating} />}
           <div className="text-[14px] font-semibold">
             {product.compareAt && <span className="mr-2 text-ink/40 line-through">{formatPrice(product.compareAt)}</span>}
             <span>{formatPrice(product.price)}</span>
           </div>
         </div>
-        <p className="mt-0.5 text-[11px] text-ink/50">{product.reviewCount} anmeldelser</p>
+        {product.reviewCount > 0 && <p className="mt-0.5 text-[11px] text-ink/50">{product.reviewCount} anmeldelser</p>}
       </button>
     </article>
   )
