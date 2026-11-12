@@ -6,7 +6,7 @@ import Header from '@/components/Header'
 import Hero from '@/components/Hero'
 import ShopSection from '@/components/ShopSection'
 import { RitualSection, IngredientsSection } from '@/components/Editorial'
-import { ReviewsSection, NewsletterSection, AboutSection, Footer } from '@/components/Sections'
+import { AboutSection, Footer } from '@/components/Sections'
 import ProductModal from '@/components/ProductModal'
 import CartDrawer from '@/components/CartDrawer'
 import WishlistDrawer from '@/components/WishlistDrawer'
@@ -54,8 +54,6 @@ function Page() {
         <ShopSection />
         <RitualSection />
         <IngredientsSection />
-        <ReviewsSection />
-        <NewsletterSection />
         <AboutSection />
       </main>
       <Footer />
