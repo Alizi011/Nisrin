@@ -6,14 +6,12 @@ const NAV = [
   { label: 'Butikk', href: '#butikk' },
   { label: 'Ritualer', href: '#ritualer' },
   { label: 'Ingredienser', href: '#ingredienser' },
-  { label: 'Anmeldelser', href: '#anmeldelser' },
   { label: 'Om oss', href: '#om' },
 ]
 
 const MARQUEE_ITEMS = [
   'Fri frakt på bestillinger over 600 kr',
   'Håndlaget i Marokko — levert i Norge',
-  '10 % avslag med koden HAMMAM10',
   'Kaldpresset arganolje fra Agadir',
 ]
 
