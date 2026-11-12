@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { PRODUCTS, formatPrice } from '@/data/products'
+import { formatPrice } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
 import { Stars } from '@/components/ProductCard'
 
@@ -10,13 +10,13 @@ export default function SearchOverlay() {
 }
 
 function SearchOverlayContent() {
-  const { setSearchOpen, openProduct } = useShop()
+  const { products, setSearchOpen, openProduct } = useShop()
   const [query, setQuery] = useState('')
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return []
-    return PRODUCTS.filter(
+    return products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q) ||
@@ -24,7 +24,7 @@ function SearchOverlayContent() {
         p.concerns.some((c) => c.toLowerCase().includes(q)) ||
         p.description.toLowerCase().includes(q),
     )
-  }, [query])
+  }, [query, products])
 
 
   return (
@@ -82,11 +82,11 @@ function SearchOverlayContent() {
                 }}
                 className="group flex w-full items-center gap-5 border-b border-ink/10 py-4 text-left transition-colors hover:bg-cream/60"
               >
-                <img src={p.image} alt="" className="h-16 w-16 shrink-0 object-cover" />
+                {p.image ? <img src={p.image} alt="" className="h-16 w-16 shrink-0 object-cover" /> : <div aria-hidden="true" className="h-16 w-16 shrink-0 bg-sand" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold tracking-[0.22em] text-olive uppercase">{p.category}</p>
                   <p className="font-display truncate text-xl font-semibold group-hover:text-rust">{p.name}</p>
-                  <Stars value={p.rating} className="h-3 w-3" />
+                  {p.reviewCount > 0 && <Stars value={p.rating} className="h-3 w-3" />}
                 </div>
                 <span className="shrink-0 text-sm font-semibold">{formatPrice(p.price)}</span>
               </button>
