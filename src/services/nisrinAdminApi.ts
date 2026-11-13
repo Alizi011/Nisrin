@@ -231,3 +231,53 @@ export async function getAdminOverview(): Promise<NisrinAdminOverview> {
   const result = await request<{ overview: NisrinAdminOverview }>('/admin/overview')
   return result.overview
 }
+
+export type NisrinInventoryVariant = {
+  variantId: number
+  productId: number
+  productName: string
+  sku: string
+  variantLabel: string
+  productStatus: string
+  complianceStatus: string
+  isActive: boolean
+  stockConfigured: boolean
+  onHand: number | null
+  reserved: number | null
+  availableQty: number | null
+  version: number
+}
+
+/** Never substitutes zero/in-stock data when the inventory API is unavailable. */
+export async function getAdminInventory(): Promise<NisrinInventoryVariant[]> {
+  const response = await request<{ variants: NisrinInventoryVariant[] }>('/admin/inventory')
+  if (!Array.isArray(response.variants)) {
+    throw new NisrinApiError('Ugyldig varelager fra serveren.', 502)
+  }
+  return response.variants
+}
+
+/** Set physical on-hand count; server owns reserved stock and audit log. */
+export async function setInventoryOnHand(
+  variantId: number,
+  input: { onHand: number; expectedVersion: number; reason: string },
+): Promise<void> {
+  if (!Number.isSafeInteger(variantId) || variantId < 1 ||
+      !Number.isSafeInteger(input.onHand) || input.onHand < 0 || input.onHand > 1000000 ||
+      !Number.isSafeInteger(input.expectedVersion) || input.expectedVersion < 0 ||
+      input.reason.trim().length < 3 || input.reason.length > 200) {
+    throw new NisrinApiError('Ugyldig lagerbeholdning, versjon eller begrunnelse.', 400)
+  }
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{ updated: boolean; stock: { variantId: number; version: number } }>(
+    `/admin/inventory/${variantId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify(input),
+    },
+  )
+  if (result.updated !== true || result.stock?.variantId !== variantId ||
+      !Number.isSafeInteger(result.stock.version) || result.stock.version <= input.expectedVersion) {
+    throw new NisrinApiError('Serveren bekreftet ikke lagerendringen.', 502)
+  }
+}

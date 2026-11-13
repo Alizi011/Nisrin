@@ -100,13 +100,17 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const validCart = useMemo(() => cart.filter((item) =>
-    products.some((p) => p.id === item.productId && p.variants.some((v) => v.label === item.variantLabel)) &&
+    products.some((p) => p.id === item.productId && p.variants.some((v) =>
+      v.label === item.variantLabel && Number.isSafeInteger(v.availableQty) &&
+      (v.availableQty ?? 0) >= item.qty)) &&
     Number.isSafeInteger(item.qty) && item.qty > 0 && item.qty <= 99,
   ), [cart, products])
 
   const addToCart = useCallback((productId: string, variantLabel: string, qty = 1) => {
     const product = products.find((p) => p.id === productId)
-    if (!product || !product.variants.some((v) => v.label === variantLabel) ||
+    const variant = product?.variants.find((v) => v.label === variantLabel)
+    const available = variant?.availableQty ?? 0
+    if (!product || !Number.isSafeInteger(available) || available < 1 ||
         !Number.isSafeInteger(qty) || qty < 1) {
       showToast('Dette produktet er ikke tilgjengelig i katalogen.')
       return
@@ -115,21 +119,23 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       const existing = prev.findIndex((item) => item.productId === productId && item.variantLabel === variantLabel)
       if (existing >= 0) {
         const next = [...prev]
-        next[existing] = { ...next[existing], qty: Math.min(99, next[existing].qty + qty) }
+        next[existing] = { ...next[existing], qty: Math.min(99, available, next[existing].qty + qty) }
         return next
       }
-      return [...prev, { productId, variantLabel, qty: Math.min(99, qty) }]
+      return [...prev, { productId, variantLabel, qty: Math.min(99, available, qty) }]
     })
     showToast(`${product.name} lagt i handlekurven (ingen bestilling opprettet)`)
   }, [products, showToast])
 
   const updateQty = useCallback((productId: string, variantLabel: string, delta: number) => {
+    const available = products.find((p) => p.id === productId)?.variants.find(
+      (v) => v.label === variantLabel)?.availableQty ?? 0
     setCart((prev) => prev.map((item) =>
       item.productId === productId && item.variantLabel === variantLabel
-        ? { ...item, qty: Math.min(99, item.qty + delta) }
+        ? { ...item, qty: Math.min(99, available, item.qty + delta) }
         : item,
     ).filter((item) => item.qty > 0))
-  }, [])
+  }, [products])
   const removeFromCart = useCallback((productId: string, variantLabel: string) => {
     setCart((prev) => prev.filter((item) => !(item.productId === productId && item.variantLabel === variantLabel)))
   }, [])

@@ -19,6 +19,8 @@ export interface Variant {
   sku?: string
   label: string
   price: number
+  /** Live API stock; absent means not verified/available for ordering. */
+  availableQty?: number
 }
 
 export interface Review {
