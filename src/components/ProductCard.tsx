@@ -23,6 +23,7 @@ export function Stars({ value, className = 'h-3.5 w-3.5' }: { value: number; cla
 export default function ProductCard({ product }: { product: Product }) {
   const { addToCart, toggleWishlist, wishlist, openProduct } = useShop()
   const wished = wishlist.includes(product.id)
+  const firstInStock = product.variants.find((v) => (v.availableQty ?? 0) > 0)
 
   return (
     <article className="group relative">
@@ -52,10 +53,11 @@ export default function ProductCard({ product }: { product: Product }) {
         {/* Hurtighandlinger */}
         <div className="absolute inset-x-3 bottom-3 flex translate-y-14 gap-2 transition-transform duration-400 ease-out group-hover:translate-y-0">
           <button
-            onClick={() => addToCart(product.id, product.variants[0].label)}
-            className="flex-1 bg-espresso/95 py-3 text-[11px] font-bold tracking-[0.2em] text-ivory uppercase backdrop-blur transition-colors hover:bg-rust"
+            onClick={() => { if (firstInStock) addToCart(product.id, firstInStock.label) }}
+            disabled={!firstInStock}
+            className="flex-1 bg-espresso/95 py-3 text-[11px] font-bold tracking-[0.2em] text-ivory uppercase backdrop-blur transition-colors hover:bg-rust disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Legg i kurv
+            {firstInStock ? 'Legg i kurv' : 'Utsolgt'}
           </button>
           <button
             onClick={() => toggleWishlist(product.id)}
