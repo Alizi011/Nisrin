@@ -77,7 +77,12 @@ export function parsePublicCatalog(payload: unknown, apiBase: string): Product[]
       }
       labels.add(label)
       seenSkus.add(sku)
-      return { sku, label, price: (ore as number) / 100 }
+      const available = variant.availableQty
+      if (!Number.isSafeInteger(available) || (available as number) < 0 ||
+          (available as number) > 1000000) {
+        throw new Error('Katalogen mangler verifisert lagerbeholdning.')
+      }
+      return { sku, label, price: (ore as number) / 100, availableQty: available as number }
     })
 
     const name = textField(product.name, 160, true)
