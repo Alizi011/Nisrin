@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowLeft, Boxes, ClipboardList, LayoutDashboard, LockKeyhole, LogOut, Package, ShoppingBag, Users } from 'lucide-react'
 import { getSession, login, logout, type NisrinUser } from '@/services/nisrinAdminApi'
 import AdminProductsPanel from '@/pages/AdminProductsPanel'
+import AdminInventoryPanel from '@/pages/AdminInventoryPanel'
 import AdminStaffPanel from '@/pages/AdminStaffPanel'
 import AdminOverviewPanel from '@/pages/AdminOverviewPanel'
 
@@ -213,6 +214,8 @@ export default function AdminPreview() {
                     <AdminOverviewPanel />
                   ) : authenticated && canReadProducts(user) && selected === 'Produkter' ? (
                     <AdminProductsPanel />
+                  ) : authenticated && canReadProducts(user) && selected === 'Varelager' ? (
+                    <AdminInventoryPanel />
                   ) : isAdmin && selected === 'Ansatte' ? (
                     <AdminStaffPanel currentUserId={user.id} />
                   ) : (
