@@ -13,6 +13,7 @@ export default function ProductModal() {
   if (!product) return null
   const variant = product.variants[variantIndex] ?? product.variants[0]
   const wished = wishlist.includes(product.id)
+  const available = variant.availableQty ?? 0
 
   const close = () => {
     openProduct(null)
@@ -46,11 +47,11 @@ export default function ProductModal() {
               <p className="mb-2 text-[10px] font-bold tracking-[0.22em] text-ink/50 uppercase">Variant</p>
               <div className="flex flex-wrap gap-2">
                 {product.variants.map((v, index) => (
-                  <button key={v.sku ?? v.label} onClick={() => setVariantIndex(index)}
+                  <button key={v.sku ?? v.label} onClick={() => { setVariantIndex(index); setQty(1) }}
                     className={`border px-4 py-2 text-[11px] font-bold uppercase ${
                       variantIndex === index ? 'border-espresso bg-espresso text-ivory' : 'border-ink/25'
                     }`}>
-                    {v.label} · {formatPrice(v.price)}
+                    {v.label} · {formatPrice(v.price)}{(v.availableQty ?? 0) === 0 ? ' · Utsolgt' : ''}
                   </button>
                 ))}
               </div>
@@ -61,11 +62,11 @@ export default function ProductModal() {
             <div className="flex items-center border border-ink/25">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3.5 py-3 text-lg" aria-label="Færre">−</button>
               <span className="w-8 text-center text-sm font-bold">{qty}</span>
-              <button onClick={() => setQty(Math.min(99, qty + 1))} className="px-3.5 py-3 text-lg" aria-label="Flere">+</button>
+              <button onClick={() => setQty(Math.min(99, available, qty + 1))} disabled={qty >= available} className="px-3.5 py-3 text-lg disabled:opacity-40" aria-label="Flere">+</button>
             </div>
-            <button onClick={() => { addToCart(product.id, variant.label, qty); close() }}
-              className="flex-1 bg-rust px-5 py-3 text-[12px] font-bold tracking-[0.16em] text-ivory uppercase hover:bg-espresso">
-              Legg i handlekurv · {formatPrice(variant.price * qty)}
+            <button disabled={available < qty || available === 0} onClick={() => { addToCart(product.id, variant.label, qty); close() }}
+              className="flex-1 bg-rust px-5 py-3 text-[12px] font-bold tracking-[0.16em] text-ivory uppercase hover:bg-espresso disabled:opacity-50">
+              {available > 0 ? `Legg i handlekurv · ${formatPrice(variant.price * qty)}` : 'Utsolgt'}
             </button>
             <button onClick={() => toggleWishlist(product.id)} aria-label="Ønskeliste"
               className={`border px-4 ${
