@@ -9,8 +9,8 @@ const good = {
     description: 'Produktbeskrivelse', ingredients: 'Argan', usage: 'Bruk',
     category: 'Olje', image: '/images/argan.jpg',
     variants: [
-      { sku: 'ARG-30', label: '30 ml', priceOre: 12950 },
-      { sku: 'ARG-50', label: '50 ml', priceOre: 19900 },
+      { sku: 'ARG-30', label: '30 ml', priceOre: 12950, availableQty: 7 },
+      { sku: 'ARG-50', label: '50 ml', priceOre: 19900, availableQty: 0 },
     ],
   }],
 }
@@ -21,6 +21,8 @@ test('database catalog keeps stable DB ID, real SKU, øre-prices and same-origin
   assert.equal(p.price, 129.5)
   assert.equal(p.variants[0].price, 129.5)
   assert.equal(p.variants[1].sku, 'ARG-50')
+  assert.equal(p.variants[0].availableQty, 7)
+  assert.equal(p.variants[1].availableQty, 0)
   assert.equal(p.image, 'https://api.nisrin.no/images/argan.jpg')
   assert.deepEqual(p.reviews, [])
   assert.equal(p.rating, 0)
@@ -40,12 +42,12 @@ test('unsafe external/data image URLs are never rendered', () => {
 
 test('invalid or missing prices, SKU and duplicate variant labels fail closed', () => {
   for (const variants of [
-    [{ sku: 'ARG-30', label: '30 ml', priceOre: 0 }],
-    [{ sku: 'ARG-30', label: '30 ml', priceOre: 10.2 }],
-    [{ sku: '', label: '30 ml', priceOre: 100 }],
+    [{ sku: 'ARG-30', label: '30 ml', priceOre: 0, availableQty: 10 }],
+    [{ sku: 'ARG-30', label: '30 ml', priceOre: 10.2, availableQty: 10 }],
+    [{ sku: '', label: '30 ml', priceOre: 100, availableQty: 10 }],
     [
-      { sku: 'ARG-30', label: '30 ml', priceOre: 100 },
-      { sku: 'ARG-50', label: '30 ml', priceOre: 200 },
+      { sku: 'ARG-30', label: '30 ml', priceOre: 100, availableQty: 10 },
+      { sku: 'ARG-50', label: '30 ml', priceOre: 200, availableQty: 10 },
     ],
     [],
   ]) {
@@ -72,4 +74,16 @@ test('duplicate products and SKUs across products fail closed', () => {
   assert.throws(() => parsePublicCatalog({
     products: [good.products[0], good.products[0]],
   }, base))
+})
+
+test('inventory is mandatory: absent, negative, fractional and invented stock fail closed', () => {
+  for (const availableQty of [undefined, null, -1, 1.5, 1000001, '10']) {
+    assert.throws(() => parsePublicCatalog({
+      products: [{
+        ...good.products[0],
+        variants: [{ sku: 'STOCK-1', label: '1 stk', priceOre: 15000, availableQty }],
+      }],
+    }, base))
+  }
+  assert.equal(parsePublicCatalog(good, base)[0].variants[1].availableQty, 0)
 })
