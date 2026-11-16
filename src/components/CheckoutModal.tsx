@@ -3,13 +3,15 @@ import { formatPrice } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
 import { cancelUnpaidDraft, checkoutLines, createUnpaidDraft } from '@/services/nisrinCheckoutDraft'
 import type { UnpaidDraft } from '@/services/nisrinCheckoutDraft'
+import { fetchShippingQuote } from '@/services/nisrinShippingQuote'
+import type { ShippingQuote } from '@/services/nisrinShippingQuote'
 
 /**
  * A development-only integration preview. An unpaid inventory reservation is
  * NOT an accepted customer order and cannot be paid from this interface.
  */
 export default function CheckoutModal() {
-  const { checkoutOpen, setCheckoutOpen, cart, products, subtotal, discount, shipping, total, reloadCatalog } = useShop()
+  const { checkoutOpen, setCheckoutOpen, cart, products, subtotal, reloadCatalog } = useShop()
   const [email, setEmail] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -17,6 +19,10 @@ export default function CheckoutModal() {
   const [cancelPending, setCancelPending] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [cancelled, setCancelled] = useState(false)
+  const [postalCode, setPostalCode] = useState('')
+  const [quote, setQuote] = useState<ShippingQuote | null>(null)
+  const [quotePending, setQuotePending] = useState(false)
+  const [quoteError, setQuoteError] = useState<string | null>(null)
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
   const previewEnabled = import.meta.env.DEV && import.meta.env.VITE_NISRIN_ENABLE_DRAFT_CHECKOUT === 'true'
 
@@ -27,6 +33,8 @@ export default function CheckoutModal() {
     setPending(true)
     setError(null)
     setCancelled(false)
+    setQuote(null)
+    setQuoteError(null)
     try {
       const lines = checkoutLines(cart, products)
       const fingerprint = JSON.stringify([email.trim().toLowerCase(), lines])
@@ -49,6 +57,8 @@ export default function CheckoutModal() {
     try {
       await cancelUnpaidDraft(email, attempt.current.key)
       setDraft(null)
+      setQuote(null)
+      setQuoteError(null)
       attempt.current = null
       setCancelled(true)
       reloadCatalog()
@@ -58,6 +68,22 @@ export default function CheckoutModal() {
       setCancelError(cause instanceof Error ? cause.message : 'Kansellering ble ikke bekreftet.')
     } finally {
       setCancelPending(false)
+    }
+  }
+
+  async function requestQuote() {
+    if (!draft || !attempt.current || quotePending || cancelPending) return
+    setQuotePending(true)
+    setQuoteError(null)
+    setQuote(null)
+    try {
+      const result = await fetchShippingQuote(email, attempt.current.key, postalCode,
+        draft.orderDraftId, draft.subtotalOre)
+      setQuote(result)
+    } catch (cause) {
+      setQuoteError(cause instanceof Error ? cause.message : 'Frakt kunne ikke beregnes.')
+    } finally {
+      setQuotePending(false)
     }
   }
 
@@ -98,11 +124,8 @@ export default function CheckoutModal() {
               })}
             <div className="mt-3 space-y-1 border-t border-ink/15 pt-3 text-sm">
               <div className="flex justify-between"><span>Delsum</span><span>{formatPrice(subtotal)}</span></div>
-              {discount > 0 && <div className="flex justify-between"><span>Rabatt</span><span>−{formatPrice(discount)}</span></div>}
-              <div className="flex justify-between"><span>Foreløpig frakt (ikke servervalidert)</span><span>{formatPrice(shipping)}</span></div>
-              <div className="flex justify-between border-t border-ink/15 pt-2 font-bold">
-                <span>Foreløpig total (ikke betalingskrav)</span><span>{formatPrice(total)}</span>
-              </div>
+              <div className="flex justify-between"><span>Frakt</span><span>Ikke beregnet</span></div>
+              <p className="border-t border-ink/15 pt-2 text-xs">Ingen totalpris kan bekreftes før serveren har beregnet frakt.</p>
             </div>
           </div>
 
@@ -133,6 +156,32 @@ export default function CheckoutModal() {
               <p className="font-semibold">Ubetalt lagerreservasjon #{draft.orderDraftId}</p>
               <p>Serverberegnet varesum: {formatPrice(draft.subtotalOre / 100)}. Frakt er ikke beregnet.</p>
               <p>Reservasjonen utløper: {new Date(draft.expiresAt * 1000).toLocaleString('nb-NO')}.</p>
+              {previewEnabled && (
+                <div className="mt-4 border-t border-ink/20 pt-4">
+                  <p className="font-semibold">Utviklertest: serverberegnet frakt</p>
+                  <p className="mt-1">Kun foreløpig pris. Ingen fraktbestilling eller adresse lagres.</p>
+                  <form onSubmit={(event) => { event.preventDefault(); void requestQuote() }} className="mt-3 space-y-2">
+                    <label htmlFor="nisrin-postal-code" className="block">Norsk postnummer</label>
+                    <input id="nisrin-postal-code" type="text" inputMode="numeric" maxLength={4}
+                      pattern="[0-9]{4}" required value={postalCode}
+                      onChange={(event) => { setPostalCode(event.target.value); setQuote(null); setQuoteError(null) }}
+                      className="w-full border border-ink/30 bg-white px-3 py-2" />
+                    <button type="submit" disabled={quotePending || cancelPending}
+                      className="w-full border border-espresso px-4 py-3 font-semibold disabled:opacity-40">
+                      {quotePending ? 'Kontakter server …' : 'Hent foreløpig fraktpris'}
+                    </button>
+                  </form>
+                  {quoteError && <p role="alert" className="mt-3 text-rust">{quoteError}</p>}
+                  {quote && (
+                    <div role="status" className="mt-3 space-y-1">
+                      <p>Varesum fra server: {formatPrice(quote.subtotalOre / 100)}</p>
+                      <p>Frakt fra server: {formatPrice(quote.shippingOre / 100)}</p>
+                      <p className="font-semibold">Foreløpig total: {formatPrice(quote.totalOre / 100)}</p>
+                      <p>Dette er ikke en betaling eller bekreftet ordre.</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <p className="mt-2 font-semibold">Ingen betaling, ingen bekreftet ordre og ingen ordrebekreftelse.</p>
               {previewEnabled && (
                 <>
