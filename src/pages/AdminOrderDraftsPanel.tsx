@@ -25,6 +25,7 @@ export default function AdminOrderDraftsPanel() {
   const [drafts, setDrafts] = useState<NisrinOrderDraft[]>([])
   const [nextBefore, setNextBefore] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [retrievedAt, setRetrievedAt] = useState(0)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function AdminOrderDraftsPanel() {
         if (!active) return
         setDrafts(result.drafts)
         setNextBefore(result.nextBefore)
+        setRetrievedAt(Date.now())
       })
       .catch((cause: unknown) => {
         if (!active) return
@@ -88,7 +90,7 @@ export default function AdminOrderDraftsPanel() {
         <div className="space-y-3">
           {drafts.map((draft) => {
             const overdue = draft.status === 'pending_payment' &&
-              draft.expiresAt * 1000 <= Date.now()
+              draft.expiresAt * 1000 <= retrievedAt
             const status = draft.status === 'expired'
               ? 'Utløpt (ikke betalt)'
               : overdue
