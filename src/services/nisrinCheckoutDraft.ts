@@ -99,3 +99,53 @@ export async function createUnpaidDraft(
   }
   return parseUnpaidDraft(await response.json())
 }
+
+
+/**
+ * Validate the exact backend response. Cancellation is not a refund,
+ * payment, order acceptance or shipment.
+ */
+export function parseUnpaidCancellation(value: unknown): {
+  cancelled: true
+  paid: false
+  orderConfirmed: false
+} {
+  if (!isRecord(value) || value.cancelled !== true ||
+      value.paid !== false || value.orderConfirmed !== false) {
+    throw new Error('Serveren bekreftet ikke kansellering av ubetalt reservasjon.')
+  }
+  return { cancelled: true, paid: false, orderConfirmed: false }
+}
+
+/** Cancel only the original draft using its original key and contact email. */
+export async function cancelUnpaidDraft(
+  email: string,
+  requestKey: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestKey)) {
+    throw new Error('Ugyldig forespørsel om kansellering.')
+  }
+  // Identical development-only gate as draft creation.
+  if (!import.meta.env.DEV || import.meta.env.VITE_NISRIN_ENABLE_DRAFT_CHECKOUT !== 'true') {
+    throw new Error('Kansellering av testreservasjoner er ikke aktivert.')
+  }
+  const apiBase = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/\/+$/, '')
+  const response = await fetch(apiBase + '/order-drafts/cancel', {
+    method: 'POST',
+    credentials: 'omit',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ email: normalizedEmail, requestKey }),
+    signal,
+  })
+  if (!response.ok) {
+    if (response.status === 409) {
+      throw new Error('Reservasjonen kan ikke lenger avbrytes. Den kan ha utløpt.')
+    }
+    throw new Error('Serveren kunne ikke kansellere reservasjonen. Prøv igjen.')
+  }
+  parseUnpaidCancellation(await response.json())
+}

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { checkoutLines, parseUnpaidDraft } from '../src/services/nisrinCheckoutDraft.ts'
+import { checkoutLines, parseUnpaidDraft, parseUnpaidCancellation } from '../src/services/nisrinCheckoutDraft.ts'
 
 const products = [{
   id: 'db-4',
@@ -39,5 +39,24 @@ test('rejects any paid, confirmed, payment-enabled or invalid quote response', (
     { expiresAt: null }, { orderDraftId: -1 },
   ]) {
     assert.throws(() => parseUnpaidDraft({ ...unpaid, ...mutation }))
+  }
+})
+
+
+test('accepts only explicit backend cancellation of an unpaid draft', () => {
+  assert.deepEqual(
+    parseUnpaidCancellation({ cancelled: true, paid: false, orderConfirmed: false }),
+    { cancelled: true, paid: false, orderConfirmed: false },
+  )
+})
+
+test('never treats payment or an incomplete cancellation response as successful', () => {
+  for (const response of [
+    null, {}, { cancelled: false, paid: false, orderConfirmed: false },
+    { cancelled: true, paid: true, orderConfirmed: false },
+    { cancelled: true, paid: false, orderConfirmed: true },
+    { cancelled: 'true', paid: false, orderConfirmed: false },
+  ]) {
+    assert.throws(() => parseUnpaidCancellation(response))
   }
 })
