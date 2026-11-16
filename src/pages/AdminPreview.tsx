@@ -5,6 +5,7 @@ import AdminProductsPanel from '@/pages/AdminProductsPanel'
 import AdminInventoryPanel from '@/pages/AdminInventoryPanel'
 import AdminStaffPanel from '@/pages/AdminStaffPanel'
 import AdminOverviewPanel from '@/pages/AdminOverviewPanel'
+import AdminOrderDraftsPanel from '@/pages/AdminOrderDraftsPanel'
 
 const sections = [
   { name: 'Oversikt', description: 'Nøkkeltall og aktiviteter' },
@@ -120,7 +121,7 @@ export default function AdminPreview() {
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div role="status" className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
           <strong>Utviklingsversjon.</strong> Innlogging for butikkpersonalet er ennå ikke åpnet for offentlig tilgang.
-          Produktoversikten er under utvikling og vil kun hente data ved godkjent innlogging. Øvrige moduler er designskisser.
+          Produkter, lager og ubetalte ordreutkast hentes bare ved godkjent innlogging. Øvrige moduler er designskisser. Ingen betaling eller ordrebekreftelse er aktivert.
         </div>
 
         {error && (
@@ -216,6 +217,10 @@ export default function AdminPreview() {
                     <AdminProductsPanel />
                   ) : authenticated && canReadProducts(user) && selected === 'Varelager' ? (
                     <AdminInventoryPanel />
+                  ) : authenticated && canReadProducts(user) && selected === 'Bestillinger' ? (
+                    <AdminOrderDraftsPanel />
+                  ) : authenticated && selected === 'Bestillinger' ? (
+                    <p className="text-sm text-[#6d6255]">Lesing av ubetalte ordreutkast krever administrator- eller butikksjefrolle. Ekte ordrebehandling er ikke aktivert.</p>
                   ) : isAdmin && selected === 'Ansatte' ? (
                     <AdminStaffPanel currentUserId={user.id} />
                   ) : (
