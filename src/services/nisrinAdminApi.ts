@@ -1,3 +1,5 @@
+import { parseAdminOrderDrafts, type NisrinOrderDraftPage } from '@/services/nisrinOrderDrafts'
+
 const API_BASE = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/\/$/, '')
 
 export type NisrinUser = {
@@ -280,4 +282,17 @@ export async function setInventoryOnHand(
       !Number.isSafeInteger(result.stock.version) || result.stock.version <= input.expectedVersion) {
     throw new NisrinApiError('Serveren bekreftet ikke lagerendringen.', 502)
   }
+}
+
+/**
+ * List only persisted UNPAID drafts. This is not a customer-order or payment
+ * API; no request to create/reserve/capture anything is made here.
+ */
+export async function getAdminOrderDrafts(before?: number): Promise<NisrinOrderDraftPage> {
+  if (before !== undefined && (!Number.isSafeInteger(before) || before < 1)) {
+    throw new NisrinApiError('Ugyldig side i ordreutkastoversikten.', 400)
+  }
+  const suffix = before === undefined ? '' : `?before=${before}`
+  const payload = await request<unknown>(`/admin/order-drafts${suffix}`)
+  return parseAdminOrderDrafts(payload)
 }
