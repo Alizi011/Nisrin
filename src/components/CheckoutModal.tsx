@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { formatPrice } from '@/data/products'
 import { useShop } from '@/store/ShopContext'
-import { checkoutLines, createUnpaidDraft } from '@/services/nisrinCheckoutDraft'
+import { cancelUnpaidDraft, checkoutLines, createUnpaidDraft } from '@/services/nisrinCheckoutDraft'
 import type { UnpaidDraft } from '@/services/nisrinCheckoutDraft'
 
 /**
@@ -14,6 +14,9 @@ export default function CheckoutModal() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState<UnpaidDraft | null>(null)
+  const [cancelPending, setCancelPending] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [cancelled, setCancelled] = useState(false)
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
   const previewEnabled = import.meta.env.DEV && import.meta.env.VITE_NISRIN_ENABLE_DRAFT_CHECKOUT === 'true'
 
@@ -23,6 +26,7 @@ export default function CheckoutModal() {
     if (pending || draft) return
     setPending(true)
     setError(null)
+    setCancelled(false)
     try {
       const lines = checkoutLines(cart, products)
       const fingerprint = JSON.stringify([email.trim().toLowerCase(), lines])
@@ -35,6 +39,25 @@ export default function CheckoutModal() {
       setError(cause instanceof Error ? cause.message : 'Det oppstod en ukjent feil.')
     } finally {
       setPending(false)
+    }
+  }
+
+  async function cancelDraft() {
+    if (!draft || !attempt.current || cancelPending) return
+    setCancelPending(true)
+    setCancelError(null)
+    try {
+      await cancelUnpaidDraft(email, attempt.current.key)
+      setDraft(null)
+      attempt.current = null
+      setCancelled(true)
+      reloadCatalog()
+    } catch (cause) {
+      // Keep the draft visible after a network error or ambiguous response.
+      // Never claim stock was released without an explicit backend response.
+      setCancelError(cause instanceof Error ? cause.message : 'Kansellering ble ikke bekreftet.')
+    } finally {
+      setCancelPending(false)
     }
   }
 
@@ -100,12 +123,26 @@ export default function CheckoutModal() {
               </form>
             </div>
           )}
+          {cancelled && (
+            <p role="status" className="mt-6 border border-ink/20 bg-cream p-5 text-sm">
+              Serveren bekreftet at den ubetalte lagerreservasjonen er kansellert. Ingen bestilling ble fullført eller betalt.
+            </p>
+          )}
           {draft && (
             <div role="status" className="mt-6 border border-ink/20 bg-cream p-5 text-sm">
               <p className="font-semibold">Ubetalt lagerreservasjon #{draft.orderDraftId}</p>
               <p>Serverberegnet varesum: {formatPrice(draft.subtotalOre / 100)}. Frakt er ikke beregnet.</p>
               <p>Reservasjonen utløper: {new Date(draft.expiresAt * 1000).toLocaleString('nb-NO')}.</p>
               <p className="mt-2 font-semibold">Ingen betaling, ingen bekreftet ordre og ingen ordrebekreftelse.</p>
+              {previewEnabled && (
+                <>
+                  {cancelError && <p role="alert" className="mt-3 text-rust">{cancelError}</p>}
+                  <button type="button" onClick={() => void cancelDraft()} disabled={cancelPending}
+                    className="mt-4 w-full border border-espresso px-4 py-3 font-semibold disabled:opacity-40">
+                    {cancelPending ? 'Ber serveren avbryte …' : 'Avbryt ubetalt reservasjon'}
+                  </button>
+                </>
+              )}
             </div>
           )}
           <button type="button" onClick={() => setCheckoutOpen(false)}
