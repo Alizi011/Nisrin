@@ -32,7 +32,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function boundedText(value: string, minBytes: number, maxBytes: number): boolean {
-  if (typeof value !== 'string' || /[\u0000-\u001f\u007f]/.test(value)) return false
+  if (typeof value !== 'string' || value.length > maxBytes) return false
+  for (const character of value) {
+    const code = character.codePointAt(0)
+    if (code !== undefined && (code < 32 || code === 127)) return false
+  }
   const size = new TextEncoder().encode(value.trim()).length
   return size >= minBytes && size <= maxBytes
 }
