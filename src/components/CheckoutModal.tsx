@@ -5,6 +5,7 @@ import { cancelUnpaidDraft, checkoutLines, createUnpaidDraft } from '@/services/
 import type { UnpaidDraft } from '@/services/nisrinCheckoutDraft'
 import { fetchShippingQuote } from '@/services/nisrinShippingQuote'
 import type { ShippingQuote } from '@/services/nisrinShippingQuote'
+import UnpaidDeliveryDevForm from '@/components/UnpaidDeliveryDevForm'
 
 /**
  * A development-only integration preview. An unpaid inventory reservation is
@@ -23,6 +24,8 @@ export default function CheckoutModal() {
   const [quote, setQuote] = useState<ShippingQuote | null>(null)
   const [quotePending, setQuotePending] = useState(false)
   const [quoteError, setQuoteError] = useState<string | null>(null)
+  const [deliveryPending, setDeliveryPending] = useState(false)
+  const [activeRequestKey, setActiveRequestKey] = useState<string | null>(null)
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
   const previewEnabled = import.meta.env.DEV && import.meta.env.VITE_NISRIN_ENABLE_DRAFT_CHECKOUT === 'true'
 
@@ -42,6 +45,7 @@ export default function CheckoutModal() {
         attempt.current = { fingerprint, key: crypto.randomUUID() }
       }
       const result = await createUnpaidDraft(email, lines, attempt.current.key)
+      setActiveRequestKey(attempt.current.key)
       setDraft(result)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Det oppstod en ukjent feil.')
@@ -51,12 +55,13 @@ export default function CheckoutModal() {
   }
 
   async function cancelDraft() {
-    if (!draft || !attempt.current || cancelPending) return
+    if (!draft || !attempt.current || cancelPending || quotePending || deliveryPending) return
     setCancelPending(true)
     setCancelError(null)
     try {
       await cancelUnpaidDraft(email, attempt.current.key)
       setDraft(null)
+      setActiveRequestKey(null)
       setQuote(null)
       setQuoteError(null)
       attempt.current = null
@@ -72,7 +77,7 @@ export default function CheckoutModal() {
   }
 
   async function requestQuote() {
-    if (!draft || !attempt.current || quotePending || cancelPending) return
+    if (!draft || !attempt.current || quotePending || cancelPending || deliveryPending) return
     setQuotePending(true)
     setQuoteError(null)
     setQuote(null)
@@ -97,7 +102,7 @@ export default function CheckoutModal() {
         className="nice-scroll relative flex max-h-[94vh] w-full max-w-2xl flex-col overflow-y-auto bg-ivory"
       >
         <div className="zellige-band h-8 border-b border-majorelle/25" aria-hidden="true" />
-        <button type="button" onClick={() => setCheckoutOpen(false)} aria-label="Lukk kassen"
+        <button type="button" disabled={deliveryPending} onClick={() => setCheckoutOpen(false)} aria-label="Lukk kassen"
           className="absolute top-12 right-4 p-1 text-lg hover:text-rust">✕</button>
         <div className="px-6 py-8 md:px-10">
           <h2 id="nisrin-checkout-heading" className="font-display text-3xl font-semibold">Handlekurven din</h2>
@@ -159,14 +164,15 @@ export default function CheckoutModal() {
               {previewEnabled && (
                 <div className="mt-4 border-t border-ink/20 pt-4">
                   <p className="font-semibold">Utviklertest: serverberegnet frakt</p>
-                  <p className="mt-1">Kun foreløpig pris. Ingen fraktbestilling eller adresse lagres.</p>
+                  <p className="mt-1">Kun foreløpig pris. Du kan deretter lagre en fiktiv testadresse på det ubetalte utkastet.</p>
                   <form onSubmit={(event) => { event.preventDefault(); void requestQuote() }} className="mt-3 space-y-2">
                     <label htmlFor="nisrin-postal-code" className="block">Norsk postnummer</label>
                     <input id="nisrin-postal-code" type="text" inputMode="numeric" maxLength={4}
                       pattern="[0-9]{4}" required value={postalCode}
+                      disabled={deliveryPending}
                       onChange={(event) => { setPostalCode(event.target.value); setQuote(null); setQuoteError(null) }}
                       className="w-full border border-ink/30 bg-white px-3 py-2" />
-                    <button type="submit" disabled={quotePending || cancelPending}
+                    <button type="submit" disabled={quotePending || cancelPending || deliveryPending}
                       className="w-full border border-espresso px-4 py-3 font-semibold disabled:opacity-40">
                       {quotePending ? 'Kontakter server …' : 'Hent foreløpig fraktpris'}
                     </button>
@@ -180,13 +186,22 @@ export default function CheckoutModal() {
                       <p>Dette er ikke en betaling eller bekreftet ordre.</p>
                     </div>
                   )}
+                  {quote && activeRequestKey && (
+                    <UnpaidDeliveryDevForm
+                      key={`${draft.orderDraftId}-${postalCode}-${quote.totalOre}`}
+                      draft={draft} email={email} requestKey={activeRequestKey}
+                      postalCode={postalCode} saving={deliveryPending}
+                      onSavingChange={setDeliveryPending}
+                    />
+                  )}
                 </div>
               )}
               <p className="mt-2 font-semibold">Ingen betaling, ingen bekreftet ordre og ingen ordrebekreftelse.</p>
               {previewEnabled && (
                 <>
                   {cancelError && <p role="alert" className="mt-3 text-rust">{cancelError}</p>}
-                  <button type="button" onClick={() => void cancelDraft()} disabled={cancelPending}
+                  <button type="button" onClick={() => void cancelDraft()}
+                    disabled={cancelPending || quotePending || deliveryPending}
                     className="mt-4 w-full border border-espresso px-4 py-3 font-semibold disabled:opacity-40">
                     {cancelPending ? 'Ber serveren avbryte …' : 'Avbryt ubetalt reservasjon'}
                   </button>
