@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getCustomerSession, loginCustomer, logoutCustomer, registerCustomer } from '@/services/nisrinCustomerAccount'
 import type { NisrinUser } from '@/services/nisrinAdminApi'
+import { confirmEmailVerification, getEmailVerified, requestEmailVerification, tokenFromFragment } from '@/services/nisrinEmailVerification'
 
 export default function CustomerAccount() {
   const [mode, setMode] = useState<'login' | 'register'>(
@@ -14,6 +15,8 @@ export default function CustomerAccount() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [verified, setVerified] = useState<boolean | null>(null)
+  const isConfirmationPage = window.location.pathname === '/konto/bekreft'
 
   useEffect(() => {
     let active = true
@@ -26,6 +29,61 @@ export default function CustomerAccount() {
     })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    let active = true
+    if (user) {
+      getEmailVerified().then((status) => {
+        if (active) setVerified(status)
+      }).catch(() => {
+        if (active) setVerified(null)
+      })
+    } else {
+      setVerified(null)
+    }
+    return () => { active = false }
+  }, [user])
+
+  async function sendVerification() {
+    if (pending) return
+    setPending(true)
+    setError('')
+    setNotice('')
+    try {
+      const alreadyVerified = await requestEmailVerification()
+      if (alreadyVerified) {
+        setVerified(true)
+        setNotice('E-postadressen er allerede bekreftet.')
+      } else {
+        setNotice('Vi har sendt en bekreftelseslenke. Den er gyldig i 30 minutter.')
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'E-postbekreftelse er ikke tilgjengelig.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function confirmVerification() {
+    const token = tokenFromFragment(window.location.hash)
+    if (!token) {
+      setError('Lenken mangler et gyldig bekreftelsestoken.')
+      return
+    }
+    if (pending) return
+    setPending(true)
+    setError('')
+    try {
+      await confirmEmailVerification(token)
+      setVerified(true)
+      window.history.replaceState(null, '', window.location.pathname)
+      setNotice('E-postadressen er bekreftet.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Bekreftelse mislyktes.')
+    } finally {
+      setPending(false)
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -91,6 +149,23 @@ export default function CustomerAccount() {
             <div>
               <h2 className="font-display text-2xl">Velkommen, {user.name}</h2>
               <p className="mt-2 text-sm">{user.email}</p>
+              <div className="mt-5 border border-ink/15 bg-cream p-4 text-sm">
+                <p className="font-semibold">E-postadresse: {verified === true ? 'Bekreftet' : verified === false ? 'Ikke bekreftet' : 'Ikke kontrollert'}</p>
+                {verified !== true && (
+                  <div className="mt-3 space-y-3">
+                    {isConfirmationPage && (
+                      <button type="button" onClick={() => void confirmVerification()} disabled={pending}
+                        className="w-full bg-espresso px-4 py-3 font-bold text-ivory disabled:opacity-50">
+                        {pending ? 'Bekrefter …' : 'Bekreft e-postadressen min'}
+                      </button>
+                    )}
+                    <button type="button" onClick={() => void sendVerification()} disabled={pending}
+                      className="w-full border border-espresso px-4 py-3 font-semibold disabled:opacity-50">
+                      {pending ? 'Kontakter server …' : 'Send bekreftelseslenke'}
+                    </button>
+                  </div>
+                )}
+              </div>
               <p className="mt-5 border border-ink/15 bg-cream p-4 text-sm">
                 Kontoen er logget inn. Ordrehistorikk, adresser og bestilling blir tilgjengelig etter at kunde- og ordresystemet er aktivert. Ingen betaling kan gjennomføres nå.
               </p>
@@ -136,6 +211,7 @@ export default function CustomerAccount() {
                   {pending ? 'Kontakter server …' : mode === 'register' ? 'Opprett konto' : 'Logg inn'}
                 </button>
               </form>
+              {isConfirmationPage && <p className="mt-4 text-sm text-rust">Logg inn med kundekontoen for å bekrefte e-postadressen.</p>}
               <p className="mt-5 text-xs text-ink/60">
                 Registrering er ikke aktivert på produksjons-API-et ennå. Vi ber ikke om betalingsopplysninger.
               </p>
