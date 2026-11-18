@@ -126,12 +126,11 @@ export function AboutSection() {
             <StarDivider />
           </div>
           <p className="mt-8 text-[15px] leading-relaxed text-ink/75">
-            Nisrin — «villrose» på arabisk — ble til etter en reise gjennom Marokko der vi møtte kvinnene bak
-            kooperativene i Agadir-regionen — hendene som presser arganoljen, plukker rosene og høster safranen. Vi
-            jobber direkte med dem, uten mellomledd, slik at hver flaske bærer med seg både kvalitet og rettferdig handel.
+            Nisrin utvikles som en nettbutikk inspirert av marokkanske skjønnhetstradisjoner. Vi viser foreløpig
+            illustrasjoner av mulige produkter mens vi arbeider med å finne riktige leverandører og bygge sortimentet.
           </p>
           <p className="mt-4 text-[15px] leading-relaxed text-ink/75">
-            Alle produktene våre er rene, naturlige og håndlaget i små partier. Det tar lenger tid — og det er helt poenget.
+            Produktene og prisene på denne siden er demoeksempler. Ingen varer er tilgjengelige for bestilling ennå.
           </p>
         </div>
       </div>
@@ -154,8 +153,7 @@ export function Footer() {
               </div>
             </div>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-ivory/65">
-              Autentiske marokkanske skjønnhetsritualer — arganolje, rhassoul, rosvann og hammam — levert fra vårt lager i
-              Oslo.
+              En kommende butikk inspirert av marokkanske skjønnhetsritualer. Produktene som vises er kun demo og kan ikke bestilles.
             </p>
           </div>
           <div>
@@ -169,16 +167,15 @@ export function Footer() {
           <div>
             <p className="mb-4 text-[11px] font-bold tracking-[0.24em] text-saffron uppercase">Kundeservice</p>
             <ul className="space-y-2.5 text-sm text-ivory/70">
-              <li>Fri frakt over 600 kr</li>
-              <li>Levering 2–4 virkedager</li>
-              <li>30 dagers åpent kjøp</li>
+              <li>Butikken er ikke åpnet for bestilling</li>
+              <li>Frakt og returvilkår kommer før salgsstart</li>
               <li>post@nisrin.no</li>
             </ul>
           </div>
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ivory/15 pt-6 text-[11px] tracking-[0.14em] text-ivory/45 uppercase md:flex-row">
           <span>© 2026 Nisrin</span>
-          <span>Håndlaget i Marokko · Pakket i Oslo</span>
+          <span>Demo – ingen produkter til salgs</span>
         </div>
       </div>
     </footer>
