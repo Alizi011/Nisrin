@@ -33,6 +33,8 @@ export interface Review {
 
 export interface Product {
   id: string
+  /** Clearly labeled examples, never eligible for sale. */
+  isDemo?: boolean
   name: string
   subtitle: string
   category: Category
