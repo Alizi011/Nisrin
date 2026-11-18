@@ -19,14 +19,27 @@ function textField(value: unknown, maxLength: number, required = false): string 
   return text
 }
 
-function safeImage(value: unknown, apiBase: string): string {
+function safeImage(
+  value: unknown,
+  apiBase: string,
+  bundledImages: Readonly<Record<string, string>>,
+): string {
   if (typeof value !== 'string' || !value.trim()) return ''
+  const image = value.trim()
+  // Original NISRIN records store Vite source paths, not public API URLs.
+  // Only resolve a precise file path that exists in the actual frontend bundle.
+  if (image.startsWith('src/assets/')) {
+    return /^src\/assets\/[a-z0-9-]+\.jpg$/.test(image)
+      ? (bundledImages[`/${image}`] ?? '')
+      : ''
+  }
   try {
     const origin = new URL(apiBase)
-    const url = new URL(value.trim(), origin.origin + '/')
-    // Images must be served from the configured API origin. Never trust arbitrary
-    // image URLs from the database (including data:, javascript: and external hosts).
-    return url.origin === origin.origin && ['https:', 'http:'].includes(url.protocol)
+    const url = new URL(image, origin.origin + '/')
+    // Remotely hosted images may only use the configured API origin; reject
+    // arbitrary external hosts, data:, javascript: and protocol-relative URLs.
+    return url.origin === origin.origin && ['https:', 'http:'].includes(url.protocol) &&
+      !image.startsWith('//')
       ? url.href
       : ''
   } catch {
@@ -39,7 +52,11 @@ function safeImage(value: unknown, apiBase: string): string {
  * Missing/invalid data fails closed; there is deliberately no demo fallback.
  * Database ID is stable and separate from the historical "legacy_id".
  */
-export function parsePublicCatalog(payload: unknown, apiBase: string): Product[] {
+export function parsePublicCatalog(
+  payload: unknown,
+  apiBase: string,
+  bundledImages: Readonly<Record<string, string>> = {},
+): Product[] {
   const result = record(payload)
   if (!Array.isArray(result.products) || result.products.length > 500) {
     throw new Error('Ugyldig produktkatalog fra NISRIN-API.')
@@ -94,7 +111,7 @@ export function parsePublicCatalog(payload: unknown, apiBase: string): Product[]
       category,
       concerns: [],
       price: Math.min(...variants.map((variant) => variant.price)),
-      image: safeImage(product.image, apiBase),
+      image: safeImage(product.image, apiBase, bundledImages),
       rating: 0,
       reviewCount: 0,
       description: textField(product.description, 5000),
@@ -117,5 +134,9 @@ export async function getPublicCatalog(signal?: AbortSignal): Promise<Product[]>
     signal,
   })
   if (!response.ok) throw new Error('Produktkatalogen er midlertidig utilgjengelig.')
-  return parsePublicCatalog(await response.json(), apiBase)
+  // Bundled URLs are fingerprinted by Vite; no static demo product data is used.
+  const bundledImages = import.meta.glob<string>('/src/assets/*.jpg', {
+    eager: true, query: '?url', import: 'default',
+  })
+  return parsePublicCatalog(await response.json(), apiBase, bundledImages)
 }
