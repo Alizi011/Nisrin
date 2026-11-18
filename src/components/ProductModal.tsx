@@ -39,8 +39,9 @@ export default function ProductModal() {
         </div>
         <div className="flex-1 p-6 md:p-8">
           <p className="text-[10px] font-bold tracking-[0.24em] text-olive uppercase">{product.category} · {product.subtitle}</p>
+          {product.isDemo && <p className="mt-2 text-xs font-bold text-rust uppercase">Demoprodukt · 0 på lager · Ikke til salgs</p>}
           <h2 className="font-display mt-2 text-3xl leading-tight font-semibold md:text-4xl">{product.name}</h2>
-          <p className="font-display mt-4 text-3xl font-semibold">{formatPrice(variant.price)}</p>
+          <p className="font-display mt-4 text-3xl font-semibold">{formatPrice(variant.price)}{product.isDemo && <span className="ml-2 align-middle text-xs font-normal text-ink/60">Illustrativ demopris</span>}</p>
 
           {product.variants.length > 1 && (
             <div className="mt-5">
@@ -51,7 +52,7 @@ export default function ProductModal() {
                     className={`border px-4 py-2 text-[11px] font-bold uppercase ${
                       variantIndex === index ? 'border-espresso bg-espresso text-ivory' : 'border-ink/25'
                     }`}>
-                    {v.label} · {formatPrice(v.price)}{(v.availableQty ?? 0) === 0 ? ' · Utsolgt' : ''}
+                    {v.label} · {formatPrice(v.price)}{(v.availableQty ?? 0) === 0 ? (product.isDemo ? ' · Kun demo' : ' · Utsolgt') : ''}
                   </button>
                 ))}
               </div>
@@ -64,16 +65,16 @@ export default function ProductModal() {
               <span className="w-8 text-center text-sm font-bold">{qty}</span>
               <button onClick={() => setQty(Math.min(99, available, qty + 1))} disabled={qty >= available} className="px-3.5 py-3 text-lg disabled:opacity-40" aria-label="Flere">+</button>
             </div>
-            <button disabled={available < qty || available === 0} onClick={() => { addToCart(product.id, variant.label, qty); close() }}
+            <button disabled={product.isDemo || available < qty || available === 0} onClick={() => { addToCart(product.id, variant.label, qty); close() }}
               className="flex-1 bg-rust px-5 py-3 text-[12px] font-bold tracking-[0.16em] text-ivory uppercase hover:bg-espresso disabled:opacity-50">
-              {available > 0 ? `Legg i handlekurv · ${formatPrice(variant.price * qty)}` : 'Utsolgt'}
+              {available > 0 && !product.isDemo ? `Legg i handlekurv · ${formatPrice(variant.price * qty)}` : product.isDemo ? 'Kun demo – ikke til salgs' : 'Utsolgt'}
             </button>
             <button onClick={() => toggleWishlist(product.id)} aria-label="Ønskeliste"
               className={`border px-4 ${
                 wished ? 'border-rust bg-rust text-ivory' : 'border-ink/25 hover:border-rust'
               }`}>{wished ? '♥' : '♡'}</button>
           </div>
-          <p className="mt-3 text-xs text-ink/55">Bestilling og betaling er ennå ikke åpnet. Prisene er veiledende fram til servervalidert kasse er klar.</p>
+          <p className="mt-3 text-xs text-ink/55">{product.isDemo ? 'Dette er kun en illustrasjon. Ingen ekte vare, lagerbeholdning, produktpåstander eller salgspris er verifisert.' : 'Bestilling og betaling er ennå ikke åpnet. Prisene er veiledende fram til servervalidert kasse er klar.'}</p>
 
           <div className="mt-8 flex gap-5 overflow-x-auto border-b border-ink/15">
             {([

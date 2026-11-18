@@ -10,6 +10,7 @@ export default function ShopSection() {
   const { products: catalog, catalogLoading, catalogError, reloadCatalog } = useShop()
   const [category, setCategory] = useState<Category | 'Alle'>('Alle')
   const [sort, setSort] = useState<Sort>('navn')
+  const showingDemo = catalog.length > 0 && catalog.every((product) => product.isDemo === true)
   const categories = useMemo(() => [...new Set(catalog.map((p) => p.category))].sort(), [catalog])
   const products = useMemo(() => {
     const list = catalog.filter((p) => category === 'Alle' || p.category === category)
@@ -28,7 +29,7 @@ export default function ShopSection() {
 
       {catalogLoading ? (
         <p role="status" className="py-16 text-center text-sm">Henter godkjente produkter fra NISRIN …</p>
-      ) : catalogError ? (
+      ) : catalogError && !showingDemo ? (
         <div role="alert" className="py-16 text-center">
           <p className="font-display text-2xl">{catalogError}</p>
           <button onClick={reloadCatalog} className="mt-5 border border-espresso px-6 py-2.5 text-xs font-bold uppercase">
@@ -41,6 +42,14 @@ export default function ShopSection() {
         </p>
       ) : (
         <>
+          {showingDemo && (
+            <div role="status" className="mb-8 border border-rust/30 bg-cream p-5 text-center">
+              <p className="font-bold">Demovisning – ingen produkter er til salgs ennå</p>
+              <p className="mt-2 text-sm">Bildene, produktene og prisene er kun eksempler på hvordan NISRIN kan se ut. Lagerbeholdning: 0. Bestilling og betaling er deaktivert.</p>
+              {catalogError && <p className="mt-2 text-sm">Live-katalogen svarte ikke. Vi viser bare lokale demoeksempler.</p>}
+              <button type="button" onClick={reloadCatalog} className="mt-3 border border-espresso px-4 py-2 text-xs font-bold uppercase">Kontroller katalogen på nytt</button>
+            </div>
+          )}
           <div className="reveal mb-8 flex flex-col gap-5 border-y border-ink/15 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-2">
               {['Alle', ...categories].map((c) => (

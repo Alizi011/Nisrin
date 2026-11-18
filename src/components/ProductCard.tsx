@@ -35,7 +35,8 @@ export default function ProductCard({ product }: { product: Product }) {
           ) : <div className="flex aspect-[4/5] items-center justify-center bg-sand text-xs text-ink/50">Bilde kommer</div>}
         </button>
 
-        {product.badge && (
+        {product.isDemo && <span className="absolute top-3 left-3 bg-ivory/95 px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-ink uppercase">Demo · 0 på lager</span>}
+        {!product.isDemo && product.badge && (
           <span
             className={`absolute top-3 left-3 px-3 py-1 text-[10px] font-bold tracking-[0.18em] uppercase ${
               product.badge === 'Kun noen få igjen' ? 'bg-rust text-ivory' : 'bg-ivory/95 text-ink'
@@ -44,7 +45,7 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.badge}
           </span>
         )}
-        {product.compareAt && (
+        {!product.isDemo && product.compareAt && (
           <span className="absolute top-3 right-3 bg-majorelle px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-ivory uppercase">
             Spar {formatPrice(product.compareAt - product.price)}
           </span>
@@ -57,7 +58,7 @@ export default function ProductCard({ product }: { product: Product }) {
             disabled={!firstInStock}
             className="flex-1 bg-espresso/95 py-3 text-[11px] font-bold tracking-[0.2em] text-ivory uppercase backdrop-blur transition-colors hover:bg-rust disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {firstInStock ? 'Legg i kurv' : 'Utsolgt'}
+            {firstInStock ? 'Legg i kurv' : product.isDemo ? 'Kun demo' : 'Utsolgt'}
           </button>
           <button
             onClick={() => toggleWishlist(product.id)}
@@ -85,6 +86,7 @@ export default function ProductCard({ product }: { product: Product }) {
             <span>{formatPrice(product.price)}</span>
           </div>
         </div>
+        {product.isDemo && <p className="mt-1 text-[11px] font-semibold text-rust">Illustrativ pris · Ikke til salgs</p>}
         {product.reviewCount > 0 && <p className="mt-0.5 text-[11px] text-ink/50">{product.reviewCount} anmeldelser</p>}
       </button>
     </article>
