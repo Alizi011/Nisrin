@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import type { Product } from '@/data/products'
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_COST } from '@/data/products'
 import { getPublicCatalog } from '@/services/nisrinCatalog'
+import { getDemoCatalog } from '@/data/demoCatalog'
 
 export interface CartItem {
   productId: string
