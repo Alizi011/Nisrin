@@ -24,8 +24,7 @@ export default function Hero() {
                 Marokko
               </h1>
               <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ivory/85">
-                Kaldpresset arganolje, rhassoul-leire og rosvann — tidløse ritualer fra hammamet, håndlaget av kooperativer
-                i Marokko og levert til døren din i Norge.
+                Utforsk vår kommende butikk inspirert av marokkanske skjønnhetsritualer. Produktene som vises nå er illustrerende demoeksempler og kan ikke bestilles ennå.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <a
