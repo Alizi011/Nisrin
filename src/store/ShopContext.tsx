@@ -78,12 +78,12 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     const controller = new AbortController()
     getPublicCatalog(controller.signal)
       .then((items) => {
-        if (!controller.signal.aborted) setProducts(items)
+        if (!controller.signal.aborted) setProducts(items.length ? items : getDemoCatalog())
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          setProducts([])
-          setCatalogError('Produktkatalogen er utilgjengelig. Ingen demoprodukter vises.')
+          setProducts(getDemoCatalog())
+          setCatalogError('Produktkatalogen kunne ikke lastes. Kun tydelig merkede, ikke-salgbare demoprodukter vises.')
         }
       })
       .finally(() => {
@@ -109,6 +109,10 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = useCallback((productId: string, variantLabel: string, qty = 1) => {
     const product = products.find((p) => p.id === productId)
+    if (product?.isDemo) {
+      showToast('Demoprodukter kan ikke kjøpes eller reserveres.')
+      return
+    }
     const variant = product?.variants.find((v) => v.label === variantLabel)
     const available = variant?.availableQty ?? 0
     if (!product || !Number.isSafeInteger(available) || available < 1 ||
