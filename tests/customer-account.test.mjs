@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { isCustomer, parseCustomerRegistration } from '../src/services/nisrinCustomerAccount.ts'
+import { isCustomer, parseCustomerRegistration } from '../src/services/customerAccountValidation.ts'
 
 test('customer role has no staff privileges', () => {
   assert.equal(isCustomer({ id: 1, name: 'Buyer', email: 'b@example.org', roles: ['customer'] }), true)
