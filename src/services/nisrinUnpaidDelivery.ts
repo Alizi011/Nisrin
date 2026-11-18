@@ -125,7 +125,7 @@ export async function saveUnpaidDelivery(
   const apiBase = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/\/+$/, '')
   const response = await fetch(apiBase + '/order-drafts/delivery', {
     method: 'POST',
-    credentials: 'omit',
+    credentials: 'include',
     cache: 'no-store',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
