@@ -38,8 +38,6 @@ export default function CustomerAccount() {
       }).catch(() => {
         if (active) setVerified(null)
       })
-    } else {
-      setVerified(null)
     }
     return () => { active = false }
   }, [user])
@@ -115,6 +113,7 @@ export default function CustomerAccount() {
     try {
       await logoutCustomer()
       setUser(null)
+      setVerified(null)
       setPassword('')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Utloggingen kunne ikke bekreftes.')
