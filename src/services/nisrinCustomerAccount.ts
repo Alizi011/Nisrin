@@ -47,7 +47,7 @@ export async function getCustomerSession(): Promise<NisrinUser | null> {
 }
 
 export async function loginCustomer(email: string, password: string): Promise<NisrinUser> {
-  const user = await login(email, password)
+  const user = await login(email, password, 'customer')
   if (!isCustomer(user)) {
     await logout()
     throw new Error('Denne kontoen er ikke en kundekonto. Bruk ansattinnloggingen.')
