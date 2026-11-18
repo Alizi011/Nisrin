@@ -2,10 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { getCustomerSession, loginCustomer, logoutCustomer, registerCustomer } from '@/services/nisrinCustomerAccount'
 import type { NisrinUser } from '@/services/nisrinAdminApi'
 import { confirmEmailVerification, getEmailVerified, requestEmailVerification, tokenFromFragment } from '@/services/nisrinEmailVerification'
+import { forgotCustomerPassword, resetCustomerPassword } from '@/services/nisrinCustomerPasswordReset'
 
 export default function CustomerAccount() {
-  const [mode, setMode] = useState<'login' | 'register'>(
-    window.location.pathname.startsWith('/konto/registrer') ? 'register' : 'login',
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>(
+    window.location.pathname === '/konto/tilbakestill' ? 'reset' :
+      window.location.pathname.startsWith('/konto/registrer') ? 'register' : 'login',
   )
   const [user, setUser] = useState<NisrinUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -94,6 +96,17 @@ export default function CustomerAccount() {
         await registerCustomer(name, email, password)
         setNotice('Kundekontoen ble registrert. E-postadressen er ikke verifisert, og kjøp er foreløpig ikke aktivert. Du kan logge inn.')
         setMode('login')
+      } else if (mode === 'forgot') {
+        await forgotCustomerPassword(email)
+        setNotice('Hvis e-postadressen tilhører en verifisert kundekonto, får du en tilbakestillingslenke. Kontroller innboksen.')
+        setMode('login')
+      } else if (mode === 'reset') {
+        await resetCustomerPassword(window.location.hash, password)
+        window.history.replaceState(null, '', window.location.pathname)
+        setUser(null)
+        setVerified(null)
+        setMode('login')
+        setNotice('Passordet er oppdatert. Du kan logge inn med det nye passordet.')
       } else {
         const current = await loginCustomer(email, password)
         setUser(current)
@@ -133,7 +146,7 @@ export default function CustomerAccount() {
       <main className="mx-auto max-w-lg px-5 py-12 md:py-20">
         <p className="text-center text-xs font-semibold tracking-[0.2em] text-rust uppercase">Min konto</p>
         <h1 className="font-display mt-3 text-center text-4xl font-semibold">
-          {user ? 'Min kundeside' : mode === 'register' ? 'Opprett kundekonto' : 'Logg inn som kunde'}
+          {mode === 'reset' ? 'Opprett nytt passord' : user ? 'Min kundeside' : mode === 'register' ? 'Opprett kundekonto' : mode === 'forgot' ? 'Glemt passord' : 'Logg inn som kunde'}
         </h1>
         <p className="mt-5 text-center text-sm leading-relaxed text-ink/70">
           Alle kan utforske NISRIN uten konto. Når vi åpner for bestillinger, vil en kundekonto være nødvendig for å handle.
@@ -144,7 +157,7 @@ export default function CustomerAccount() {
           {error && <p role="alert" className="mb-5 border border-rust/40 p-3 text-sm text-rust">{error}</p>}
           {loading ? (
             <p role="status">Kontrollerer konto …</p>
-          ) : user ? (
+          ) : user && mode !== 'reset' ? (
             <div>
               <h2 className="font-display text-2xl">Velkommen, {user.name}</h2>
               <p className="mt-2 text-sm">{user.email}</p>
@@ -175,7 +188,8 @@ export default function CustomerAccount() {
             </div>
           ) : (
             <>
-              <div className="mb-6 grid grid-cols-2 gap-2">
+              {mode !== 'reset' && mode !== 'forgot' ? (
+                <div className="mb-6 grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => { setMode('login'); setError('') }}
                   aria-pressed={mode === 'login'}
                   className={mode === 'login' ? 'bg-espresso px-3 py-3 text-sm text-ivory' : 'border border-ink/25 px-3 py-3 text-sm'}>
@@ -186,7 +200,11 @@ export default function CustomerAccount() {
                   className={mode === 'register' ? 'bg-espresso px-3 py-3 text-sm text-ivory' : 'border border-ink/25 px-3 py-3 text-sm'}>
                   Ny kunde
                 </button>
-              </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setMode('login'); setError('') }}
+                  className="mb-6 text-sm font-bold underline underline-offset-4">Tilbake til innlogging</button>
+              )}
               <form onSubmit={(e) => void submit(e)} className="space-y-4">
                 {mode === 'register' && (
                   <label className="block text-sm">Fullt navn
@@ -194,22 +212,26 @@ export default function CustomerAccount() {
                       disabled={pending} className="mt-2 block w-full border border-ink/30 bg-white px-3 py-3" />
                   </label>
                 )}
-                <label className="block text-sm">E-postadresse
+                {mode !== 'reset' && <label className="block text-sm">E-postadresse
                   <input required type="email" maxLength={254} autoComplete="email"
                     value={email} onChange={(e) => setEmail(e.target.value)} disabled={pending}
                     className="mt-2 block w-full border border-ink/30 bg-white px-3 py-3" />
-                </label>
-                <label className="block text-sm">Passord {mode === 'register' && '(minst 12 tegn)'}
-                  <input required type="password" minLength={mode === 'register' ? 12 : undefined}
-                    autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                </label>}
+                {mode !== 'forgot' && <label className="block text-sm">{mode === 'reset' ? 'Nytt passord' : 'Passord'} {(mode === 'register' || mode === 'reset') && '(minst 12 tegn)'}
+                  <input required type="password" minLength={mode === 'register' || mode === 'reset' ? 12 : undefined}
+                    autoComplete={mode === 'register' || mode === 'reset' ? 'new-password' : 'current-password'}
                     value={password} onChange={(e) => setPassword(e.target.value)} disabled={pending}
                     className="mt-2 block w-full border border-ink/30 bg-white px-3 py-3" />
-                </label>
+                </label>}
                 <button type="submit" disabled={pending}
                   className="w-full bg-espresso px-4 py-3 text-sm font-bold text-ivory disabled:opacity-50">
-                  {pending ? 'Kontakter server …' : mode === 'register' ? 'Opprett konto' : 'Logg inn'}
+                  {pending ? 'Kontakter server …' : mode === 'register' ? 'Opprett konto' : mode === 'forgot' ? 'Send tilbakestillingslenke' : mode === 'reset' ? 'Lagre nytt passord' : 'Logg inn'}
                 </button>
               </form>
+              {mode === 'login' && (
+                <button type="button" onClick={() => { setMode('forgot'); setError('') }}
+                  className="mt-4 text-sm font-semibold underline underline-offset-4">Glemt passord?</button>
+              )}
               {isConfirmationPage && <p className="mt-4 text-sm text-rust">Logg inn med kundekontoen for å bekrefte e-postadressen.</p>}
               <p className="mt-5 text-xs text-ink/60">
                 Registrering er ikke aktivert på produksjons-API-et ennå. Vi ber ikke om betalingsopplysninger.
