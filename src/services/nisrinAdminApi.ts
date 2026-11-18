@@ -73,11 +73,12 @@ export async function getSession(): Promise<NisrinUser | null> {
   }
 }
 
-export async function login(email: string, password: string): Promise<NisrinUser> {
+export async function login(email: string, password: string, portal: 'staff' | 'customer' = 'staff'): Promise<NisrinUser> {
   // NISRIN server generates a session-bound CSRF token.
   // If /auth/ is blocked, credentials are never sent.
   const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
-  const result = await request<{ user: NisrinUser }>('/auth/login', {
+  const path = portal === 'customer' ? '/auth/customer/login' : '/auth/login'
+  const result = await request<{ user: NisrinUser }>(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
