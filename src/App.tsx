@@ -51,7 +51,7 @@ function Page() {
 export default function App() {
   const { pathname } = useLocation()
   if (pathname === '/admin' || pathname === '/admin/') return <AdminPreview />
-  if (pathname === '/konto' || pathname === '/konto/' || pathname === '/konto/registrer') return <CustomerAccount />
+  if (pathname === '/konto' || pathname === '/konto/' || pathname === '/konto/registrer' || pathname === '/konto/bekreft') return <CustomerAccount />
 
   return (
     <ShopProvider>
