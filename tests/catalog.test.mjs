@@ -87,3 +87,39 @@ test('inventory is mandatory: absent, negative, fractional and invented stock fa
   }
   assert.equal(parsePublicCatalog(good, base)[0].variants[1].availableQty, 0)
 })
+
+test('actual NISRIN database src/assets references resolve to fingerprinted bundled images', () => {
+  const filenames = [
+    'argan-oil.jpg', 'prickly-pear.jpg', 'rhassoul-clay.jpg',
+    'rose-water.jpg', 'beldi-soap.jpg', 'saffron-cream.jpg',
+    'kessa-glove.jpg', 'orange-blossom.jpg', 'amber-perfume.jpg',
+    'rose-lip.jpg', 'hammam-set.jpg', 'aker-fassi.jpg',
+  ]
+  const bundled = Object.fromEntries(filenames.map((filename, index) => [
+    '/src/assets/' + filename, '/assets/bundled-' + index + '.jpg',
+  ]))
+  for (const filename of filenames) {
+    const image = 'src/assets/' + filename
+    const [product] = parsePublicCatalog({
+      products: [{ ...good.products[0], image }],
+    }, base, bundled)
+    assert.equal(product.image, bundled['/' + image])
+    assert.equal(product.price, 129.5)
+    assert.equal(product.variants[0].availableQty, 7)
+    assert.equal(product.reviewCount, 0)
+  }
+  // Source paths are never guessed to be hosted on api.nisrin.no.
+  assert.equal(parsePublicCatalog({
+    products: [{ ...good.products[0], image: 'src/assets/missing.jpg' }],
+  }, base, bundled)[0].image, '')
+  for (const image of [
+    'src/assets/../secrets.jpg', 'src/assets/../../other.jpg',
+    'src/assets/x.svg', 'src/assets/a.jpg?unsafe=1',
+    '//evil.example/a', 'https://elsewhere.example/product.jpg',
+  ]) {
+    assert.equal(parsePublicCatalog({
+      products: [{ ...good.products[0], image }],
+    }, base, bundled)[0].image, '')
+  }
+  assert.deepEqual(parsePublicCatalog({ products: [] }, base, bundled), [])
+})
