@@ -8,7 +8,7 @@ export function parseCustomerEmailStatus(value: unknown): boolean {
   return (value as { emailVerified: boolean }).emailVerified
 }
 
-async function customerRequest(path: string, method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
+export async function customerRequest(path: string, method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
   let token: string | undefined
   if (method === 'POST') {
     const csrf = await fetch(API + '/auth/csrf', {
