@@ -87,6 +87,10 @@ export default function Header() {
 
           {/* Høyre: verktøy */}
           <div className="flex items-center gap-1 md:gap-2">
+            <a href="/konto" aria-label="Min kundekonto" title="Kundepålogging"
+              className="p-2 text-xs font-bold transition-colors hover:text-rust">
+              Min konto
+            </a>
             <button
               onClick={() => setSearchOpen(true)}
               className="p-2 transition-colors hover:text-rust"
