@@ -91,10 +91,16 @@ export default function AdminProductsPanel() {
     setImageError('')
     setImageMessage('')
     try {
-      await uploadDraftProductImage(productId, file)
-      setProducts(await getAdminProducts())
+      const imagePath = await uploadDraftProductImage(productId, file)
+      setProducts((previous) => previous.map((product) =>
+        product.id === productId ? { ...product, imagePath } : product))
       form.reset()
       setImageMessage('Bildet er lagret privat på NISRIN-serveren. Produktet er fortsatt ikke publisert eller godkjent.')
+      try {
+        setProducts(await getAdminProducts())
+      } catch {
+        setImageError('Bildet ble lagret, men produktlisten kunne ikke oppdateres. Last siden på nytt.')
+      }
     } catch (cause: unknown) {
       setImageError(cause instanceof Error ? cause.message : 'Bildet ble ikke bekreftet lagret.')
     } finally {
