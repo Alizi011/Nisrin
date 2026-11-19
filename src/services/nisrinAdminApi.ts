@@ -1,4 +1,5 @@
 import { parseAdminOrderDrafts, type NisrinOrderDraftPage } from '@/services/nisrinOrderDrafts'
+import { isDraftImageAcceptable, isPrivateMediaPath } from '@/services/nisrinImagePolicy'
 
 const API_BASE = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/\/$/, '')
 
@@ -164,8 +165,7 @@ export async function uploadDraftProductImage(id: number, file: File): Promise<s
   if (!Number.isSafeInteger(id) || id < 1) {
     throw new NisrinApiError('Ugyldig produkt-ID.', 400)
   }
-  if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
-      file.size < 1 || file.size > 4 * 1024 * 1024) {
+  if (!file || !isDraftImageAcceptable(file)) {
     throw new NisrinApiError('Velg JPEG, PNG eller WebP på maksimalt 4 MB.', 400)
   }
 
@@ -185,7 +185,7 @@ export async function uploadDraftProductImage(id: number, file: File): Promise<s
   })
   if (result.saved !== true || result.published !== false ||
       result.productId !== id ||
-      !/^\/media\/[a-f0-9]{48}\.(jpg|png|webp)$/.test(result.imagePath)) {
+      !isPrivateMediaPath(result.imagePath)) {
     throw new NisrinApiError('Serveren bekreftet ikke trygg lagring av produktbildet.', 502)
   }
   return result.imagePath
