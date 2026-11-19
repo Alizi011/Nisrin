@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import AdminCreateProductDraft from '@/pages/AdminCreateProductDraft'
 import {
-  getAdminProducts, updateDraftProduct, type NisrinAdminProduct,
+  getAdminProducts, updateDraftProduct, uploadDraftProductImage, type NisrinAdminProduct,
   type NisrinProductDraftInput,
 } from '@/services/nisrinAdminApi'
 
@@ -29,6 +29,9 @@ export default function AdminProductsPanel() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saveMessage, setSaveMessage] = useState('')
+  const [uploadingImageId, setUploadingImageId] = useState<number | null>(null)
+  const [imageError, setImageError] = useState('')
+  const [imageMessage, setImageMessage] = useState('')
 
   const edit = (product: NisrinAdminProduct) => {
     if (product.status !== 'draft' || product.complianceStatus === 'approved') return
@@ -73,6 +76,38 @@ export default function AdminProductsPanel() {
     }
   }
 
+
+  const uploadImage = async (event: FormEvent<HTMLFormElement>, productId: number) => {
+    event.preventDefault()
+    if (uploadingImageId !== null) return
+    const form = event.currentTarget
+    const input = form.elements.namedItem('image') as HTMLInputElement | null
+    const file = input?.files?.[0]
+    if (!file) {
+      setImageError('Velg et bilde før du lagrer.')
+      return
+    }
+    setUploadingImageId(productId)
+    setImageError('')
+    setImageMessage('')
+    try {
+      const imagePath = await uploadDraftProductImage(productId, file)
+      setProducts((previous) => previous.map((product) =>
+        product.id === productId ? { ...product, imagePath } : product))
+      form.reset()
+      setImageMessage('Bildet er lagret privat på NISRIN-serveren. Produktet er fortsatt ikke publisert eller godkjent.')
+      try {
+        setProducts(await getAdminProducts())
+      } catch {
+        setImageError('Bildet ble lagret, men produktlisten kunne ikke oppdateres. Last siden på nytt.')
+      }
+    } catch (cause: unknown) {
+      setImageError(cause instanceof Error ? cause.message : 'Bildet ble ikke bekreftet lagret.')
+    } finally {
+      setUploadingImageId(null)
+    }
+  }
+
   useEffect(() => {
     let active = true
 
@@ -113,12 +148,13 @@ export default function AdminProductsPanel() {
     <div className="overflow-x-auto">
       <AdminCreateProductDraft onCreated={async () => setProducts(await getAdminProducts())} />
       <p className="mb-4 text-sm text-[#6d6255]">{products.length} produkter hentet fra NISRIN-API. Viser også utkast.</p>
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[800px] border-collapse text-left text-sm">
         <thead className="border-b border-[#e8dfd4] text-[#6d6255]">
           <tr>
             <th scope="col" className="p-3">Produkt</th>
             <th scope="col" className="p-3">Status</th>
             <th scope="col" className="p-3">Dokumentasjon</th>
+            <th scope="col" className="p-3">Bilde</th>
             <th scope="col" className="p-3">Varianter</th>
           </tr>
         </thead>
@@ -138,6 +174,32 @@ export default function AdminProductsPanel() {
               <td className="p-3">{statusLabel(product.status)}</td>
               <td className="p-3">{statusLabel(product.complianceStatus)}</td>
               <td className="p-3">
+                {product.imagePath ? (
+                  <p className="break-all text-xs text-[#6d6255]">
+                    Bilde lagret: {product.imagePath}
+                  </p>
+                ) : (
+                  <p className="text-xs text-[#8a5c30]">Ingen bilde registrert</p>
+                )}
+                {product.status === 'draft' && product.complianceStatus !== 'approved' && (
+                  <form onSubmit={(event) => void uploadImage(event, product.id)}
+                    className="mt-2 space-y-2">
+                    <label className="block text-xs">
+                      <span className="mb-1 block">Velg ekte produktbilde</span>
+                      <input name="image" type="file" required
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={uploadingImageId !== null}
+                        className="block max-w-52 text-xs" />
+                    </label>
+                    <button type="submit" disabled={uploadingImageId !== null}
+                      className="rounded border border-[#786454] px-3 py-1 text-xs disabled:opacity-50">
+                      {uploadingImageId === product.id ? 'Lagrer bilde …' : 'Last opp bilde'}
+                    </button>
+                    <p className="text-xs text-[#6d6255]">JPEG, PNG eller WebP, maks. 4 MB. Ikke publisert.</p>
+                  </form>
+                )}
+              </td>
+              <td className="p-3">
                 {product.variants.length ? (
                   <ul className="space-y-2">
                     {product.variants.map((variant) => (
@@ -155,6 +217,8 @@ export default function AdminProductsPanel() {
           ))}
         </tbody>
       </table>
+      {imageMessage && <p role="status" className="mt-4 border border-green-300 p-3 text-sm">{imageMessage}</p>}
+      {imageError && <p role="alert" className="mt-4 border border-red-300 p-3 text-sm text-red-900">{imageError}</p>}
       {saveMessage && <p role="status" className="mt-4 rounded border border-green-300 p-3 text-sm">{saveMessage}</p>}
       {saveError && <p role="alert" className="mt-4 rounded border border-red-300 p-3 text-sm text-red-900">{saveError}</p>}
       {draft && editingId !== null && (

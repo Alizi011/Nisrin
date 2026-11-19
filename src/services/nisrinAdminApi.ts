@@ -1,4 +1,5 @@
 import { parseAdminOrderDrafts, type NisrinOrderDraftPage } from '@/services/nisrinOrderDrafts'
+import { isDraftImageAcceptable, isPrivateMediaPath } from '@/services/nisrinImagePolicy'
 
 const API_BASE = (import.meta.env.VITE_NISRIN_API_URL || 'https://api.nisrin.no').replace(/\/$/, '')
 
@@ -108,6 +109,7 @@ export type NisrinAdminProduct = {
   description: string
   ingredients: string
   usage: string
+  imagePath: string
   status: string
   complianceStatus: string
   category: string | null
@@ -153,6 +155,40 @@ export async function updateDraftProduct(
   if (result.updated !== true || result.id !== id) {
     throw new NisrinApiError('Produktet ble ikke bekreftet lagret av serveren.', 502)
   }
+}
+
+/**
+ * Upload one real photo to the PRIVATE backend media store for an unpublished
+ * product. A successful upload is never a product approval or publication.
+ */
+export async function uploadDraftProductImage(id: number, file: File): Promise<string> {
+  if (!Number.isSafeInteger(id) || id < 1) {
+    throw new NisrinApiError('Ugyldig produkt-ID.', 400)
+  }
+  if (!file || !isDraftImageAcceptable(file)) {
+    throw new NisrinApiError('Velg JPEG, PNG eller WebP på maksimalt 4 MB.', 400)
+  }
+
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const form = new FormData()
+  form.append('image', file)
+  // Do not set Content-Type: the browser must generate the multipart boundary.
+  const result = await request<{
+    saved: boolean
+    published: boolean
+    productId: number
+    imagePath: string
+  }>(`/admin/products/${id}/image`, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body: form,
+  })
+  if (result.saved !== true || result.published !== false ||
+      result.productId !== id ||
+      !isPrivateMediaPath(result.imagePath)) {
+    throw new NisrinApiError('Serveren bekreftet ikke trygg lagring av produktbildet.', 502)
+  }
+  return result.imagePath
 }
 
 export type NisrinCreateProductInput = Omit<NisrinProductDraftInput, 'variants'> & {
