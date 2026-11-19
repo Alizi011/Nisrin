@@ -185,7 +185,7 @@ export async function uploadDraftProductImage(id: number, file: File): Promise<s
   })
   if (result.saved !== true || result.published !== false ||
       result.productId !== id ||
-      !/^\\/media\\/[a-f0-9]{48}\\.(jpg|png|webp)$/.test(result.imagePath)) {
+      !/^\/media\/[a-f0-9]{48}\.(jpg|png|webp)$/.test(result.imagePath)) {
     throw new NisrinApiError('Serveren bekreftet ikke trygg lagring av produktbildet.', 502)
   }
   return result.imagePath
