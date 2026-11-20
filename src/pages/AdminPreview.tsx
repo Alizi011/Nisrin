@@ -4,6 +4,7 @@ import { getSession, login, logout, type NisrinUser } from '@/services/nisrinAdm
 import AdminProductsPanel from '@/pages/AdminProductsPanel'
 import AdminInventoryPanel from '@/pages/AdminInventoryPanel'
 import AdminStaffPanel from '@/pages/AdminStaffPanel'
+import AdminPasswordPanel from '@/pages/AdminPasswordPanel'
 import AdminOverviewPanel from '@/pages/AdminOverviewPanel'
 import AdminOrderDraftsPanel from '@/pages/AdminOrderDraftsPanel'
 
@@ -40,6 +41,7 @@ export default function AdminPreview() {
   const [loadingSession, setLoadingSession] = useState(true)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [preview, setPreview] = useState(false)
@@ -104,7 +106,9 @@ export default function AdminPreview() {
 
   const authenticated = isStaff(user)
   const isAdmin = authenticated && user.roles.includes('admin')
-  const accessibleSections = visibleSections(authenticated ? user : null)
+  const accessibleSections = authenticated
+    ? [...visibleSections(user), { name: 'Kontoinnstillinger', description: 'Endre eget passord' }]
+    : visibleSections(null)
   const showDashboard = authenticated || preview
 
   return (
@@ -129,6 +133,8 @@ export default function AdminPreview() {
             {error}
           </div>
         )}
+
+        {notice && <div role="status" className="mb-6 rounded-lg border border-[#e8dfd4] bg-white p-4 text-sm">{notice}</div>}
 
         {!showDashboard ? (
           <section className="mx-auto max-w-md rounded-xl border border-[#e8dfd4] bg-white p-7 shadow-sm">
@@ -211,7 +217,14 @@ export default function AdminPreview() {
                     <LayoutDashboard size={20} aria-hidden="true" />
                     <h3 className="font-serif text-2xl">{selected}</h3>
                   </div>
-                  {authenticated && canReadProducts(user) && selected === 'Oversikt' ? (
+                  {authenticated && selected === 'Kontoinnstillinger' ? (
+                    <AdminPasswordPanel onChanged={() => {
+                      setUser(null)
+                      setSelected('Oversikt')
+                      setPreview(false)
+                      setNotice('Passordet er endret på serveren og økten er avsluttet. Logg inn på nytt med det nye passordet.')
+                    }} />
+                  ) : authenticated && canReadProducts(user) && selected === 'Oversikt' ? (
                     <AdminOverviewPanel />
                   ) : authenticated && canReadProducts(user) && selected === 'Produkter' ? (
                     <AdminProductsPanel />
