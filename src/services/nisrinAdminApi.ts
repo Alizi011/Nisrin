@@ -102,6 +102,33 @@ export async function logout(): Promise<void> {
   })
 }
 
+/**
+ * A staff member changes a manually issued initial password using the existing
+ * authenticated CSRF session. The PHP server revokes the session on success.
+ */
+export async function changeStaffPassword(currentPassword: string, newPassword: string): Promise<void> {
+  if (!currentPassword || currentPassword.length > 1024 ||
+      newPassword.length < 12 || newPassword.length > 1024 ||
+      currentPassword === newPassword) {
+    throw new NisrinApiError('Oppgi nåværende passord og et nytt passord på minst 12 tegn.', 422)
+  }
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{
+    passwordChanged: boolean
+    reauthenticationRequired: boolean
+  }>('/auth/staff/password/change', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  if (result.passwordChanged !== true || result.reauthenticationRequired !== true) {
+    throw new NisrinApiError('Passordendringen ble ikke bekreftet av serveren.', 502)
+  }
+}
+
 export type NisrinAdminProduct = {
   id: number
   name: string
