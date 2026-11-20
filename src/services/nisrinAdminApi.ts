@@ -41,6 +41,15 @@ async function request<T>(
 
   if (!response.ok) {
     if (response.status === 403) {
+      // Only the signed-in staff password-change route has a narrowly scoped
+      // error distinction. An HTML/nginx 403 must still show "server blocked".
+      if (path === '/auth/staff/password/change') {
+        const failure: unknown = await response.clone().json().catch(() => null)
+        if (failure && typeof failure === 'object' && 'error' in failure &&
+            failure.error === 'Current password incorrect') {
+          throw new NisrinApiError('Nåværende passord er feil.', 403)
+        }
+      }
       throw new NisrinApiError(
         'Administrator-API-et er foreløpig sperret på serveren. Ingen innlogging er utført.',
         403,
