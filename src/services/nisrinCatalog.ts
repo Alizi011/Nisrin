@@ -29,7 +29,7 @@ function safeImage(
   // Legacy NISRIN database rows contain Vite source paths, not API URLs.
   // Resolve only exact local .jpg files actually present in this build.
   if (image.startsWith('src/assets/')) {
-    return /^src\\/assets\\/[a-z0-9-]+\\.jpg$/.test(image)
+    return /^src\/assets\/[a-z0-9-]+\.jpg$/.test(image)
       ? (bundledImages[`/${image}`] ?? '')
       : ''
   }
