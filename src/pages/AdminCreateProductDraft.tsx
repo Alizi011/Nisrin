@@ -34,14 +34,18 @@ export default function AdminCreateProductDraft({ onCreated }: { onCreated: () =
     if (saving) return
 
     const skus = form.variants.map((v) => v.sku)
+    // MariaDB has UNIQUE(product_id,label) with case-insensitive collation.
+    const labels = form.variants.map((v) => v.label.trim().toLocaleLowerCase('nb-NO'))
     if (!form.name.trim() || !form.description.trim() ||
         form.variants.length < 1 || form.variants.length > 20 ||
         new Set(skus).size !== skus.length ||
+        new Set(labels).size !== labels.length ||
         form.variants.some((v) =>
           !/^[A-Z0-9][A-Z0-9._-]{0,79}$/.test(v.sku) ||
           !v.label.trim() ||
+          new TextEncoder().encode(v.label.trim()).length > 100 ||
           !Number.isSafeInteger(v.priceOre) || v.priceOre < 1 || v.priceOre > 100000000)) {
-      setError('Sjekk navn og beskrivelse, unike SKU-er (A–Z, 0–9, punktum, bindestrek), variantnavn og positive heltallspriser i øre.')
+      setError('Sjekk navn og beskrivelse, unike SKU-er (A–Z, 0–9, punktum, bindestrek), unike variantnavn (maks 100 byte) og positive heltallspriser i øre.')
       return
     }
 
@@ -108,7 +112,7 @@ export default function AdminCreateProductDraft({ onCreated }: { onCreated: () =
               </label>
               <label className="block text-sm">
                 <span className="mb-1 block">Størrelse / variantnavn</span>
-                <input required maxLength={120} value={variant.label}
+                <input required maxLength={100} value={variant.label}
                   onChange={(event) => updateVariant(index, { label: event.target.value })}
                   className="w-full rounded border border-[#b7a797] p-2" />
               </label>
