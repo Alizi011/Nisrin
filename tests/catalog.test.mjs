@@ -87,3 +87,44 @@ test('inventory is mandatory: absent, negative, fractional and invented stock fa
   }
   assert.equal(parsePublicCatalog(good, base)[0].variants[1].availableQty, 0)
 })
+
+test('real legacy database image paths are resolved only to bundled Vite assets', () => {
+  // Historical NISRIN rows contain source paths, not publicly reachable HTTP URLs.
+  const filenames = [
+    'argan-oil.jpg', 'prickly-pear.jpg', 'rhassoul-clay.jpg',
+    'rose-water.jpg', 'beldi-soap.jpg', 'saffron-cream.jpg',
+    'kessa-glove.jpg', 'orange-blossom.jpg', 'amber-perfume.jpg',
+    'rose-lip.jpg', 'hammam-set.jpg', 'aker-fassi.jpg',
+  ]
+  const bundled = Object.fromEntries(filenames.map((filename, index) => [
+    '/src/assets/' + filename, '/assets/fingerprinted-' + index + '.jpg',
+  ]))
+  for (const filename of filenames) {
+    const path = 'src/assets/' + filename
+    const [product] = parsePublicCatalog({
+      products: [{ ...good.products[0], image: path }],
+    }, base, bundled)
+    assert.equal(product.image, bundled['/' + path])
+    // Image resolution must never invent catalog pricing, approval or inventory.
+    assert.equal(product.price, 129.5)
+    assert.equal(product.variants[0].availableQty, 7)
+    assert.equal(product.reviewCount, 0)
+  }
+  assert.equal(parsePublicCatalog({
+    products: [{ ...good.products[0], image: 'src/assets/unknown.jpg' }],
+  }, base, bundled)[0].image, '')
+  for (const image of [
+    'src/assets/../secrets.jpg',
+    'src/assets/../../elsewhere.jpg',
+    'src/assets/a.jpg?unsafe=1',
+    'src/assets/a.svg',
+    '//evil.example/a',
+    'https://untrusted.example/a.jpg',
+    'data:image/svg+xml,evil',
+  ]) {
+    assert.equal(parsePublicCatalog({
+      products: [{ ...good.products[0], image }],
+    }, base, bundled)[0].image, '')
+  }
+  assert.deepEqual(parsePublicCatalog({ products: [] }, base, bundled), [])
+})
