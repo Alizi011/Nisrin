@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import { test } from 'node:test'
 import { parsePublicCatalog } from '../src/services/nisrinCatalog.ts'
 
@@ -100,6 +101,8 @@ test('real legacy database image paths are resolved only to bundled Vite assets'
     '/src/assets/' + filename, '/assets/fingerprinted-' + index + '.jpg',
   ]))
   for (const filename of filenames) {
+    // The Vite glob is only useful if the historical asset truly exists.
+    assert.ok(existsSync(new URL('../src/assets/' + filename, import.meta.url)), filename + ' missing from bundle sources')
     const path = 'src/assets/' + filename
     const [product] = parsePublicCatalog({
       products: [{ ...good.products[0], image: path }],
