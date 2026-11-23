@@ -320,41 +320,43 @@ export type NisrinInventoryVariant = {
   onHand: number | null
   reserved: number | null
   availableQty: number | null
-  version: number
+  stockIssue: 'verified' | 'unknown' | 'expired_only' | 'reconciliation_required'
+  lotCount: number
+  expiredLotCount: number
 }
 
-/** Never substitutes zero/in-stock data when the inventory API is unavailable. */
+/**
+ * The admin stock view reads only NISRIN's real lot ledger. Reject malformed
+ * availability instead of rendering a guessed stock number. No write endpoint
+ * is offered until audited lot-based stocktake exists on the PHP API.
+ */
 export async function getAdminInventory(): Promise<NisrinInventoryVariant[]> {
   const response = await request<{ variants: NisrinInventoryVariant[] }>('/admin/inventory')
-  if (!Array.isArray(response.variants)) {
-    throw new NisrinApiError('Ugyldig varelager fra serveren.', 502)
+  if (!Array.isArray(response.variants) ||
+      !response.variants.every((entry) => {
+        if (!entry || !Number.isSafeInteger(entry.variantId) || entry.variantId < 1 ||
+            !Number.isSafeInteger(entry.lotCount) || entry.lotCount < 0 ||
+            !Number.isSafeInteger(entry.expiredLotCount) || entry.expiredLotCount < 0 ||
+            entry.expiredLotCount > entry.lotCount ||
+            !['verified', 'unknown', 'expired_only', 'reconciliation_required'].includes(entry.stockIssue)) {
+          return false
+        }
+        if (entry.stockIssue === 'verified') {
+          return entry.stockConfigured === true &&
+            Number.isSafeInteger(entry.onHand) &&
+            Number.isSafeInteger(entry.reserved) &&
+            Number.isSafeInteger(entry.availableQty) &&
+            entry.onHand !== null && entry.reserved !== null && entry.availableQty !== null &&
+            entry.onHand >= 0 && entry.onHand <= 1000000 &&
+            entry.reserved >= 0 && entry.reserved <= entry.onHand &&
+            entry.availableQty === entry.onHand - entry.reserved
+        }
+        return entry.stockConfigured === false &&
+          entry.onHand === null && entry.reserved === null && entry.availableQty === null
+      })) {
+    throw new NisrinApiError('Ugyldig lagerjournal fra NISRIN-serveren.', 502)
   }
   return response.variants
-}
-
-/** Set physical on-hand count; server owns reserved stock and audit log. */
-export async function setInventoryOnHand(
-  variantId: number,
-  input: { onHand: number; expectedVersion: number; reason: string },
-): Promise<void> {
-  if (!Number.isSafeInteger(variantId) || variantId < 1 ||
-      !Number.isSafeInteger(input.onHand) || input.onHand < 0 || input.onHand > 1000000 ||
-      !Number.isSafeInteger(input.expectedVersion) || input.expectedVersion < 0 ||
-      input.reason.trim().length < 3 || input.reason.length > 200) {
-    throw new NisrinApiError('Ugyldig lagerbeholdning, versjon eller begrunnelse.', 400)
-  }
-  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
-  const result = await request<{ updated: boolean; stock: { variantId: number; version: number } }>(
-    `/admin/inventory/${variantId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-      body: JSON.stringify(input),
-    },
-  )
-  if (result.updated !== true || result.stock?.variantId !== variantId ||
-      !Number.isSafeInteger(result.stock.version) || result.stock.version <= input.expectedVersion) {
-    throw new NisrinApiError('Serveren bekreftet ikke lagerendringen.', 502)
-  }
 }
 
 /**
