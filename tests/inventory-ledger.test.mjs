@@ -28,3 +28,16 @@ test('unavailable inventory mirror cannot be written from frontend', () => {
   assert.doesNotMatch(view, /Registrer opptelling/)
   assert.doesNotMatch(view, /Lagre reell lageropptelling/)
 })
+
+test('new physical lot receipts use real warehouse choices and CSRF, never the mirror', () => {
+  assert.match(api, /'\/admin\/inventory\/warehouses'/)
+  assert.match(api, /'\/admin\/inventory\/receipts'/)
+  const receipt = api.slice(api.indexOf('export async function receiveInventoryLot'), api.indexOf('export async function getAdminOrderDrafts'))
+  assert.match(receipt, /'X-CSRF-Token': csrfToken/)
+  assert.match(receipt, /result\.receivedQuantity !== input\.quantity/)
+  assert.match(view, /warehouses\.length === 0/)
+  assert.match(view, /await receiveInventoryLot/)
+  assert.match(view, /submitting\.current/)
+  assert.match(view, /cause\.status === 409/)
+  assert.match(view, /Kontroller journalen før nytt forsøk/)
+})
