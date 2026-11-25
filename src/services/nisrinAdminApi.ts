@@ -327,8 +327,8 @@ export type NisrinInventoryVariant = {
 
 /**
  * The admin stock view reads only NISRIN's real lot ledger. Reject malformed
- * availability instead of rendering a guessed stock number. No write endpoint
- * is offered until audited lot-based stocktake exists on the PHP API.
+ * availability instead of rendering a guessed stock number. New-lot receipts
+ * use a separate audited endpoint; arbitrary stocktake remains unavailable.
  */
 export async function getAdminInventory(): Promise<NisrinInventoryVariant[]> {
   const response = await request<{ variants: NisrinInventoryVariant[] }>('/admin/inventory')
@@ -357,6 +357,49 @@ export async function getAdminInventory(): Promise<NisrinInventoryVariant[]> {
     throw new NisrinApiError('Ugyldig lagerjournal fra NISRIN-serveren.', 502)
   }
   return response.variants
+}
+
+
+export type NisrinWarehouse = { id: number; code: string; name: string }
+export type NisrinLotReceipt = {
+  variantId: number
+  warehouseId: number
+  lotNumber: string
+  expiryDate: string | null
+  quantity: number
+}
+
+export async function getInventoryWarehouses(): Promise<NisrinWarehouse[]> {
+  const result = await request<{ warehouses: NisrinWarehouse[] }>('/admin/inventory/warehouses')
+  if (!Array.isArray(result.warehouses) || !result.warehouses.every((w) =>
+    w && Number.isSafeInteger(w.id) && w.id > 0 &&
+    typeof w.code === 'string' && typeof w.name === 'string')) {
+    throw new NisrinApiError('Ugyldig lagerstedsliste fra serveren.', 502)
+  }
+  return result.warehouses
+}
+
+/** Never auto-retry an ambiguous receipt. Only server-confirmed receipt is success. */
+export async function receiveInventoryLot(input: NisrinLotReceipt): Promise<number> {
+  if (!Number.isSafeInteger(input.variantId) || input.variantId < 1 ||
+      !Number.isSafeInteger(input.warehouseId) || input.warehouseId < 1 ||
+      !Number.isSafeInteger(input.quantity) || input.quantity < 1 || input.quantity > 1000000 ||
+      !/^[A-Za-z0-9][A-Za-z0-9._ -]{0,99}$/.test(input.lotNumber) ||
+      input.lotNumber.trim() !== input.lotNumber ||
+      (input.expiryDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(input.expiryDate))) {
+    throw new NisrinApiError('Kontroller vareparti, lagersted, dato og antall.', 422)
+  }
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{ lotId: number; receivedQuantity: number }>('/admin/inventory/receipts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(input),
+  })
+  if (!Number.isSafeInteger(result.lotId) || result.lotId < 1 ||
+      result.receivedQuantity !== input.quantity) {
+    throw new NisrinApiError('Varemottaket ble ikke bekreftet. Kontroller journalen før nytt forsøk.', 502)
+  }
+  return result.lotId
 }
 
 /**
