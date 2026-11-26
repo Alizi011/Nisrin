@@ -379,6 +379,27 @@ export async function getInventoryWarehouses(): Promise<NisrinWarehouse[]> {
   return result.warehouses
 }
 
+/** Register a real warehouse; never infer success or auto-retry. */
+export async function createInventoryWarehouse(input: { code: string; name: string }): Promise<NisrinWarehouse> {
+  if (!/^[A-Z0-9][A-Z0-9_-]{0,39}$/.test(input.code) ||
+      !input.name || input.name.trim() !== input.name ||
+      new TextEncoder().encode(input.name).length > 150 || /\p{C}/u.test(input.name)) {
+    throw new NisrinApiError('Kontroller lagerkode og navn.', 422)
+  }
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{ warehouse: NisrinWarehouse }>('/admin/inventory/warehouses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(input),
+  })
+  const warehouse = result.warehouse
+  if (!warehouse || !Number.isSafeInteger(warehouse.id) || warehouse.id < 1 ||
+      warehouse.code !== input.code || warehouse.name !== input.name) {
+    throw new NisrinApiError('Lagerstedet ble ikke bekreftet. Kontroller listen før nytt forsøk.', 502)
+  }
+  return warehouse
+}
+
 /** Never auto-retry an ambiguous receipt. Only server-confirmed receipt is success. */
 export async function receiveInventoryLot(input: NisrinLotReceipt): Promise<number> {
   if (!Number.isSafeInteger(input.variantId) || input.variantId < 1 ||

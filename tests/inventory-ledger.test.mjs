@@ -41,3 +41,16 @@ test('new physical lot receipts use real warehouse choices and CSRF, never the m
   assert.match(view, /cause\.status === 409/)
   assert.match(view, /Kontroller journalen før nytt forsøk/)
 })
+
+test('actual warehouse registration uses existing API and waits for verified server identity', () => {
+  const create = api.slice(api.indexOf('export async function createInventoryWarehouse'), api.indexOf('export async function receiveInventoryLot'))
+  assert.match(create, /'\/admin\/inventory\/warehouses'/)
+  assert.match(create, /method: 'POST'/)
+  assert.match(create, /'X-CSRF-Token': csrfToken/)
+  assert.match(create, /warehouse\.code !== input\.code/)
+  assert.match(create, /warehouse\.name !== input\.name/)
+  assert.match(view, /await createInventoryWarehouse/)
+  assert.match(view, /!warehouseConfirmed/)
+  assert.match(view, /setWarehouseId\(String\(saved\.id\)\)/)
+  assert.match(view, /Kontroller lagerstedslisten før nytt forsøk/)
+})
