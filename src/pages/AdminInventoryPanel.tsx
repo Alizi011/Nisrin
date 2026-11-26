@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { getAdminInventory, getInventoryWarehouses, receiveInventoryLot, NisrinApiError,
+import { getAdminInventory, getInventoryWarehouses, createInventoryWarehouse, receiveInventoryLot, NisrinApiError,
   type NisrinInventoryVariant, type NisrinWarehouse } from '@/services/nisrinAdminApi'
 
 const stockLabels: Record<NisrinInventoryVariant['stockIssue'], string> = {
@@ -31,6 +31,39 @@ export default function AdminInventoryPanel() {
   const submitting = useRef(false)
   const [receiptError, setReceiptError] = useState('')
   const [receiptSuccess, setReceiptSuccess] = useState('')
+  const [warehouseCode, setWarehouseCode] = useState('')
+  const [warehouseName, setWarehouseName] = useState('')
+  const [warehouseConfirmed, setWarehouseConfirmed] = useState(false)
+  const [warehouseSaveError, setWarehouseSaveError] = useState('')
+  const [warehouseSaveSuccess, setWarehouseSaveSuccess] = useState('')
+
+  async function submitWarehouse(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (submitting.current || warehouseLoading || warehouseError || !warehouseConfirmed) return
+    submitting.current = true
+    setBusy(true)
+    setWarehouseSaveError('')
+    setWarehouseSaveSuccess('')
+    try {
+      const saved = await createInventoryWarehouse({ code: warehouseCode, name: warehouseName })
+      setWarehouseSaveSuccess(`Lagersted ${saved.name} (${saved.code}) er registrert.`)
+      setWarehouseId(String(saved.id))
+      setConfirmed(false)
+      setWarehouseCode('')
+      setWarehouseName('')
+    } catch (cause: unknown) {
+      setWarehouseSaveError(cause instanceof NisrinApiError && cause.status === 409
+        ? 'Lagerkoden finnes allerede. Kontroller listen, og bruk eksisterende lagersted.'
+        : 'Registreringen er ikke bekreftet. Kontroller lagerstedslisten før nytt forsøk.')
+    } finally {
+      setWarehouseConfirmed(false)
+      setWarehouseLoading(true)
+      setLoading(true)
+      setRefresh((previous) => previous + 1)
+      submitting.current = false
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -112,6 +145,31 @@ export default function AdminInventoryPanel() {
       </button>
       {error && <p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-red-900">{error}</p>}
       {!loading && variants.length === 0 && !error && <p>Ingen varianter registrert.</p>}
+      <form onSubmit={submitWarehouse} className="space-y-3 rounded border border-[#d5c9b9] p-4">
+        <h3 className="font-semibold">Registrer faktisk lagersted</h3>
+        <p>Registrer et fysisk lagersted med unik kode. Dette oppretter ingen varebeholdning.</p>
+        {warehouseError && <p role="alert">{warehouseError}</p>}
+        <fieldset disabled={busy || warehouseLoading || !!warehouseError} className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1">Lagerkode (A–Z, 0–9, _ eller -)
+            <input required maxLength={40} value={warehouseCode}
+              onChange={(e) => { setWarehouseCode(e.target.value.toUpperCase()); setWarehouseConfirmed(false) }} className="rounded border p-2" />
+          </label>
+          <label className="grid gap-1">Navn på lagersted
+            <input required maxLength={150} value={warehouseName}
+              onChange={(e) => { setWarehouseName(e.target.value); setWarehouseConfirmed(false) }} className="rounded border p-2" />
+          </label>
+          <label className="flex items-start gap-2 sm:col-span-2">
+            <input type="checkbox" required checked={warehouseConfirmed} onChange={(e) => setWarehouseConfirmed(e.target.checked)} />
+            Jeg bekrefter at dette er et faktisk lagersted, ikke et testlager.
+          </label>
+          <button type="submit" disabled={busy || !warehouseConfirmed} className="rounded border border-[#786454] px-3 py-2 disabled:opacity-50">
+            Registrer lagersted
+          </button>
+        </fieldset>
+        {warehouseSaveError && <p role="alert" className="text-red-900">{warehouseSaveError}</p>}
+        {warehouseSaveSuccess && <p role="status">{warehouseSaveSuccess}</p>}
+        {warehouses.length > 0 && <p>Registrerte lagersteder: {warehouses.map((w) => `${w.name} (${w.code})`).join(', ')}</p>}
+      </form>
       <form onSubmit={submitReceipt} className="space-y-3 rounded border border-[#d5c9b9] p-4">
         <h3 className="font-semibold">Registrer nytt varemottak</h3>
         {warehouseError && <p role="alert">{warehouseError}</p>}
