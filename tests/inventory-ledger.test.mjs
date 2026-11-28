@@ -54,3 +54,20 @@ test('actual warehouse registration uses existing API and waits for verified ser
   assert.match(view, /setWarehouseId\(String\(saved\.id\)\)/)
   assert.match(view, /Kontroller lagerstedslisten før nytt forsøk/)
 })
+
+
+test('actual physical count uses revision and server-authoritative held quantity, no mirror', () => {
+  const adjust = api.slice(api.indexOf('export async function adjustInventoryLot'))
+  assert.match(api, /'\/admin\/inventory\/lots\/' \+ variantId/)
+  assert.match(adjust, /'\/admin\/inventory\/adjustments'/)
+  assert.match(adjust, /expectedMovementId: s\.movementId/)
+  assert.match(adjust, /expectedOnHand: s\.onHand/)
+  assert.match(adjust, /countedQuantity < s\.reserved/)
+  assert.match(adjust, /'X-CSRF-Token': csrfToken/)
+  assert.match(adjust, /result\.snapshot\.onHand !== countedQuantity/)
+  assert.match(view, /countAttestation !== attestationKey/)
+  assert.match(view, /await adjustInventoryLot/)
+  assert.match(view, /l\.expired \|\| !l\.snapshot/)
+  assert.match(view, /setCountAttestation\(''\)/)
+  assert.match(view, /setRefresh\(previous => previous \+ 1\)/)
+})
