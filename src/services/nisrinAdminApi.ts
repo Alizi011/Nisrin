@@ -435,3 +435,56 @@ export async function getAdminOrderDrafts(before?: number): Promise<NisrinOrderD
   const payload = await request<unknown>(`/admin/order-drafts${suffix}`)
   return parseAdminOrderDrafts(payload)
 }
+
+
+export type NisrinLotSnapshot = { onHand: number; reserved: number; availableQty: number; movementId: number }
+export type NisrinInventoryLot = {
+  lotId: number; variantId: number; lotNumber: string; warehouseName: string
+  expiryDate: string | null; expired: boolean; snapshot: NisrinLotSnapshot | null
+}
+
+function validLotSnapshot(s: NisrinLotSnapshot | null): s is NisrinLotSnapshot {
+  return !!s && Number.isSafeInteger(s.movementId) && s.movementId > 0 &&
+    Number.isSafeInteger(s.onHand) && s.onHand >= 0 && s.onHand <= 1000000 &&
+    Number.isSafeInteger(s.reserved) && s.reserved >= 0 && s.reserved <= s.onHand &&
+    Number.isSafeInteger(s.availableQty) && s.availableQty === s.onHand - s.reserved
+}
+
+export async function getInventoryLots(variantId: number): Promise<NisrinInventoryLot[]> {
+  if (!Number.isSafeInteger(variantId) || variantId < 1) throw new NisrinApiError('Ugyldig variant.', 422)
+  const result = await request<{ lots: NisrinInventoryLot[] }>('/admin/inventory/lots/' + variantId)
+  if (!Array.isArray(result.lots) || result.lots.length > 500 ||
+      new Set(result.lots.map(l => l?.lotId)).size !== result.lots.length ||
+      !result.lots.every(l => l && Number.isSafeInteger(l.lotId) && l.lotId > 0 &&
+        l.variantId === variantId && typeof l.lotNumber === 'string' &&
+        typeof l.warehouseName === 'string' && typeof l.expired === 'boolean' &&
+        (l.expiryDate === null || (typeof l.expiryDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(l.expiryDate))) &&
+        (l.snapshot === null || validLotSnapshot(l.snapshot)))) {
+    throw new NisrinApiError('Ugyldig varepartiliste fra serveren.', 502)
+  }
+  return result.lots
+}
+
+/** Absolute physical count against a server-issued revision, never a client stock delta. */
+export async function adjustInventoryLot(lot: NisrinInventoryLot, countedQuantity: number): Promise<boolean> {
+  const s = lot.snapshot
+  if (lot.expired || !validLotSnapshot(s) || !Number.isSafeInteger(countedQuantity) ||
+      countedQuantity < s.reserved || countedQuantity > 1000000 ||
+      !Number.isSafeInteger(lot.lotId) || lot.lotId < 1 ||
+      !Number.isSafeInteger(lot.variantId) || lot.variantId < 1) {
+    throw new NisrinApiError('Kontroller fysisk antall og reservasjoner.', 422)
+  }
+  const { csrfToken } = await request<{ csrfToken: string }>('/auth/csrf')
+  const result = await request<{ lotId: number; changed: boolean; snapshot: NisrinLotSnapshot }>('/admin/inventory/adjustments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify({ variantId: lot.variantId, lotId: lot.lotId,
+      expectedMovementId: s.movementId, expectedOnHand: s.onHand, countedQuantity }),
+  })
+  if (result.lotId !== lot.lotId || !validLotSnapshot(result.snapshot) ||
+      result.snapshot.onHand !== countedQuantity || result.changed !== (countedQuantity !== s.onHand) ||
+      (result.changed ? result.snapshot.movementId <= s.movementId : result.snapshot.movementId !== s.movementId)) {
+    throw new NisrinApiError('Opptellingen ble ikke bekreftet. Kontroller journalen før nytt forsøk.', 502)
+  }
+  return result.changed
+}
