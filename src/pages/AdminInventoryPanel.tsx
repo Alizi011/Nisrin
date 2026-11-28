@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { getAdminInventory, getInventoryWarehouses, createInventoryWarehouse, receiveInventoryLot, NisrinApiError,
-  type NisrinInventoryVariant, type NisrinWarehouse } from '@/services/nisrinAdminApi'
+import { getAdminInventory, getInventoryWarehouses, createInventoryWarehouse, receiveInventoryLot, getInventoryLots, adjustInventoryLot, NisrinApiError,
+  type NisrinInventoryVariant, type NisrinWarehouse, type NisrinInventoryLot } from '@/services/nisrinAdminApi'
 
 const stockLabels: Record<NisrinInventoryVariant['stockIssue'], string> = {
   verified: 'Kontrollert i lagerjournal',
@@ -11,7 +11,7 @@ const stockLabels: Record<NisrinInventoryVariant['stockIssue'], string> = {
 
 /**
  * Review real NISRIN stock and receive new physical lots. No mirror writes,
- * arbitrary stock adjustment or product approval.
+ * unaudited stock adjustment or product approval.
  */
 export default function AdminInventoryPanel() {
   const [variants, setVariants] = useState<NisrinInventoryVariant[]>([])
@@ -36,6 +36,61 @@ export default function AdminInventoryPanel() {
   const [warehouseConfirmed, setWarehouseConfirmed] = useState(false)
   const [warehouseSaveError, setWarehouseSaveError] = useState('')
   const [warehouseSaveSuccess, setWarehouseSaveSuccess] = useState('')
+
+  const [countVariant, setCountVariant] = useState('')
+  const [countLotId, setCountLotId] = useState('')
+  const [physicalCount, setPhysicalCount] = useState('')
+  const [countAttestation, setCountAttestation] = useState('')
+  const [countMessage, setCountMessage] = useState('')
+  const [countError, setCountError] = useState('')
+  const [lotData, setLotData] = useState<{ key: string; lots: NisrinInventoryLot[]; failed: boolean } | null>(null)
+  const lotKey = countVariant + ':' + refresh
+  const currentLots = lotData?.key === lotKey ? lotData.lots : []
+  const lotLoading = !!countVariant && lotData?.key !== lotKey
+  const lotFailed = lotData?.key === lotKey && lotData.failed
+  const selectedLot = currentLots.find(l => l.lotId === Number(countLotId))
+  const snapshot = selectedLot?.snapshot
+  const attestationKey = lotKey + ':' + countLotId + ':' + snapshot?.movementId + ':' + physicalCount
+  const validCount = !!selectedLot && !selectedLot.expired && !!snapshot &&
+    /^(0|[1-9][0-9]*)$/.test(physicalCount) && Number(physicalCount) >= snapshot.reserved &&
+    Number(physicalCount) <= 1000000
+
+  useEffect(() => {
+    if (!countVariant) return
+    let active = true
+    const key = countVariant + ':' + refresh
+    getInventoryLots(Number(countVariant))
+      .then(lots => { if (active) setLotData({ key, lots, failed: false }) })
+      .catch(() => { if (active) setLotData({ key, lots: [], failed: true }) })
+    return () => { active = false }
+  }, [countVariant, refresh])
+
+  async function submitPhysicalCount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (submitting.current || loading || error || !validCount || !selectedLot ||
+        countAttestation !== attestationKey) return
+    submitting.current = true
+    setBusy(true)
+    setCountError('')
+    setCountMessage('')
+    try {
+      const changed = await adjustInventoryLot(selectedLot, Number(physicalCount))
+      setCountMessage(changed ? 'Fysisk opptelling er lagret i lagerjournalen.' : 'Opptellingen er bekreftet. Ingen lagerendring var nødvendig.')
+    } catch (cause: unknown) {
+      setCountError(cause instanceof NisrinApiError && cause.status === 409
+        ? 'Lageret er endret eller reservert. Hent oppdatert vareparti og tell på nytt.'
+        : 'Opptellingen er ikke bekreftet. Kontroller journalen før nytt forsøk.')
+    } finally {
+      setCountAttestation('')
+      setPhysicalCount('')
+      setCountLotId('')
+      setLoading(true)
+      setWarehouseLoading(true)
+      setRefresh(previous => previous + 1)
+      submitting.current = false
+      setBusy(false)
+    }
+  }
 
   async function submitWarehouse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -134,7 +189,7 @@ export default function AdminInventoryPanel() {
       </p>
       <p className="text-[#6d6255]">
         Førstegangsmottak av et nytt fysisk vareparti registreres i lagerjournalen.
-        Endring av eksisterende partier er fortsatt sperret. Varemottak godkjenner
+        Eksisterende ikke-utløpte, kontrollerte partier kan korrigeres med fysisk opptelling. Lagerregistrering godkjenner
         ikke produkter for salg.
       </p>
       <button type="button"
@@ -208,6 +263,39 @@ export default function AdminInventoryPanel() {
         </fieldset>
         {receiptError && <p role="alert" className="text-red-900">{receiptError}</p>}
         {receiptSuccess && <p role="status">{receiptSuccess}</p>}
+      </form>
+      <form onSubmit={submitPhysicalCount} className="space-y-3 rounded border border-[#d5c9b9] p-4">
+        <h3 className="font-semibold">Korriger eksisterende vareparti</h3>
+        <p>Tell fysisk antall på lager, inkludert reserverte varer. En korreksjon lagres som en ny journalpost, ikke som overskriving.</p>
+        <fieldset disabled={busy || loading || !!error} className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1">Produktvariant
+            <select required value={countVariant} onChange={e => { setCountVariant(e.target.value); setCountLotId(''); setPhysicalCount(''); setCountAttestation(''); setCountMessage(''); setCountError('') }} className="rounded border p-2">
+              <option value="">Velg variant</option>
+              {variants.map(v => <option key={v.variantId} value={v.variantId}>{v.productName} · {v.sku}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1">Vareparti
+            <select required disabled={lotLoading || !countVariant || !!lotFailed} value={countLotId} onChange={e => { setCountLotId(e.target.value); setPhysicalCount(''); setCountAttestation('') }} className="rounded border p-2">
+              <option value="">{lotLoading ? 'Henter varepartier …' : 'Velg vareparti'}</option>
+              {currentLots.map(l => <option key={l.lotId} value={l.lotId} disabled={l.expired || !l.snapshot}>{l.lotNumber} · {l.warehouseName}{l.expired ? ' · utløpt' : !l.snapshot ? ' · avvik' : ''}</option>)}
+            </select>
+          </label>
+          {lotFailed && <p role="alert" className="sm:col-span-2">Varepartier kunne ikke hentes. Oppdater lagerstatus.</p>}
+          {countVariant && !lotLoading && !lotFailed && currentLots.length === 0 && <p>Ingen varepartier registrert.</p>}
+          {snapshot && selectedLot && !selectedLot.expired && <>
+            <p className="sm:col-span-2">Journal: {snapshot.onHand} på lager · {snapshot.reserved} reservert · {snapshot.availableQty} tilgjengelig</p>
+            <label className="grid gap-1">Fysisk opptalt antall
+              <input required type="number" min={snapshot.reserved} max={1000000} step={1} value={physicalCount} onChange={e => { setPhysicalCount(e.target.value); setCountAttestation('') }} className="rounded border p-2" />
+            </label>
+            <label className="flex items-start gap-2 sm:col-span-2">
+              <input type="checkbox" required disabled={!validCount} checked={countAttestation === attestationKey} onChange={e => setCountAttestation(e.target.checked ? attestationKey : '')} />
+              Jeg har fysisk kontrollert antallet for dette varepartiet.
+            </label>
+          </>}
+          <button type="submit" disabled={!validCount || busy || countAttestation !== attestationKey} className="rounded border border-[#786454] px-3 py-2 disabled:opacity-50">Lagre fysisk opptelling</button>
+        </fieldset>
+        {countError && <p role="alert" className="text-red-900">{countError}</p>}
+        {countMessage && <p role="status">{countMessage}</p>}
       </form>
       {variants.length > 0 && !error && (
         <div className="overflow-x-auto">
